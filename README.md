@@ -42,7 +42,10 @@ It reports, without needing a database:
 - two files claiming the same version, which makes Flyway refuse to run anything
 - a new migration numbered at or below the highest on `main`, which applies out of order
   and leaves environments diverged
-- a published migration that was modified or deleted (rule 1)
+- a published migration that was modified or deleted (rule 1). Removing a file is allowed
+  in one case: when `main` has two files claiming one version. Flyway refuses to run
+  anything while that clash stands, so neither file was applied anywhere and deleting one
+  of them is the only way to repair the chain.
 
 The workflow additionally runs `flyway validate` against the dev database, which compares
 checksums against what that database actually applied. Pending migrations are expected on
