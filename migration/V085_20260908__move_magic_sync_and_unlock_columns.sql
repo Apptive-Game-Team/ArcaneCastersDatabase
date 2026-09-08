@@ -14,33 +14,20 @@
 -- Dropping it is what "시전 종류를 없앤다" means at the schema level.
 
 -- ------------------------------------------------------------------ sync timestamp
--- Added without a default on purpose. ADD COLUMN ... DEFAULT now() stamps every existing row
--- immediately, and then the backfill below has no NULL left to find and silently does nothing.
--- The default goes on after the values are in place.
+--
+-- Added without a default. ADD COLUMN ... DEFAULT now() stamps every existing row in place,
+-- and then a backfill has no NULL left to find and silently does nothing.
 ALTER TABLE magics
     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
 
--- Carry the recipe's timestamp over rather than stamping everything with now(). A client that
--- already holds a cached copy compares against this value, and moving every magic forward at
--- once would force a full refetch for no reason. Only fill what is still empty, so a rerun
--- after magic_cards is gone changes nothing.
-DO
-$$
-    BEGIN
-        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'magic_cards') THEN
-            UPDATE magics m
-            SET updated_at = source.max_updated_at
-            FROM (SELECT magic_id, MAX(updated_at) AS max_updated_at
-                  FROM magic_cards
-                  WHERE updated_at IS NOT NULL
-                  GROUP BY magic_id) AS source
-            WHERE m.id = source.magic_id
-              AND m.updated_at IS NULL;
-        END IF;
-
-        UPDATE magics SET updated_at = now() WHERE updated_at IS NULL;
-    END
-$$;
+-- Every magic is stamped with one fresh timestamp rather than carrying its recipe's timestamp
+-- over. The client compares its cached version against max(updated_at) and only refetches when
+-- that moves; carrying the old values over would leave the maximum exactly where the cached
+-- version already is, because the old version was max(magic_cards.updated_at) over the same
+-- rows. The response shape changes here - castType and cards leave, element, manaCost and
+-- aimShape arrive - so a client that keeps its cached copy reads every magic as element 'None'.
+-- A full refetch is the point, not a cost to avoid.
+UPDATE magics SET updated_at = now() WHERE updated_at IS NULL;
 
 ALTER TABLE magics
     ALTER COLUMN updated_at SET DEFAULT now();
