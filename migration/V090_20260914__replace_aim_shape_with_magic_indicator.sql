@@ -19,7 +19,7 @@ ALTER TABLE magics
 -- A magic's own parameters are found the way every other magic-card migration finds them:
 -- magics.name = game_objects.name, then parameter_values joined to parameters by name. See
 -- V084 for why that join exists (game_objects rows created there for magics with no other
--- game object) and V089 for magics that carry attack_range on that same row.
+-- game object). Registration migrations may also put attack_range on that same row.
 --
 -- base_layer reproduces today's on-screen behaviour exactly:
 --   aim_shape = 1                       -> a lane from the caster to the aim point, half width
@@ -86,8 +86,8 @@ WHERE magic_indicator.magic_id = magics.id
   AND magics.indicator IS NULL;
 
 -- The default matters as much as the NOT NULL. Registration migrations arrive constantly on the
--- other chain (V077 through V082 registered six magics, V089 five more) and none of them names a
--- column this migration had not added yet. Without a default the next INSERT INTO magics fails
+-- the main lineage (V077 through V082 registered six magics) and none of them names a
+-- column this migration had not added yet. Without a default the next magic registration fails
 -- with "null value in column indicator violates not-null constraint" and the dev database stops
 -- migrating. A base circle at the aim point sized by the magic's own radius parameter is what a
 -- newly registered magic should draw anyway, and it is exactly what the client falls back to when
@@ -103,8 +103,8 @@ ALTER TABLE magics
 -- -------------------------------------------------------------------------- remove aim_shape
 --
 -- The jsonb document is now the single source of the indicator shape. aim_shape is read
--- nowhere else in this repository (V084 seeded it, V085's comment only notes that V084 already
--- consumed cast_type into it, V089 seeded it for the five composite magics) so both the values
+-- nowhere else in this repository (V084 seeded it, and V085's comment only notes that V084 already
+-- consumed cast_type into it) so both the values
 -- and the parameter definition can go.
 DELETE
 FROM parameter_values
