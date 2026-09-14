@@ -32,10 +32,16 @@ ALTER TABLE magics
 -- repository's migration chain carries an attack_offset parameter today, so forwardOffset
 -- falls back to 0 until one does; the layer is still written unconditionally on attack_range
 -- so it is already correct when such a magic arrives.
+-- The join to game_objects is a LEFT JOIN on purpose. V084 inserts a game_objects row for
+-- every magic, so it should always hit, but about 50 magics exist only in the operational
+-- database and cannot be checked here. With an inner join a single missing row would produce
+-- no layer for that magic, and the SET NOT NULL two statements below would abort the whole
+-- migration. With a LEFT JOIN that magic falls through to the base circle instead, which is
+-- what a magic with no parameters of its own should draw anyway.
 WITH magic_object AS (SELECT magic.id        AS magic_id,
                              game_object.id AS game_object_id
                       FROM magics magic
-                               JOIN game_objects game_object ON game_object.name = magic.name),
+                               LEFT JOIN game_objects game_object ON game_object.name = magic.name),
      layer_row AS (SELECT magic_object.magic_id,
                           1 AS layer_order,
                           CASE
