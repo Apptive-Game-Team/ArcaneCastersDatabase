@@ -85,6 +85,18 @@ FROM magic_indicator
 WHERE magic_indicator.magic_id = magics.id
   AND magics.indicator IS NULL;
 
+-- The default matters as much as the NOT NULL. Registration migrations arrive constantly on the
+-- other chain (V077 through V082 registered six magics, V089 five more) and none of them names a
+-- column this migration had not added yet. Without a default the next INSERT INTO magics fails
+-- with "null value in column indicator violates not-null constraint" and the dev database stops
+-- migrating. A base circle at the aim point sized by the magic's own radius parameter is what a
+-- newly registered magic should draw anyway, and it is exactly what the client falls back to when
+-- a document is missing, so the default and the fallback agree. A magic that needs a lane or a
+-- strike layer sets indicator explicitly in its own registration migration.
+ALTER TABLE magics
+    ALTER COLUMN indicator SET DEFAULT
+        '{"version": 1, "layers": [{"shape": "circle", "origin": "target", "radius": {"parameter": "radius"}}]}'::jsonb;
+
 ALTER TABLE magics
     ALTER COLUMN indicator SET NOT NULL;
 
