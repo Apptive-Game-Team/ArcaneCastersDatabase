@@ -77,6 +77,12 @@ mapfile -t base_migrations < <(git ls-tree -r --name-only "$BASE_REF" -- "$MIGRA
 
 highest_base_version=$(printf '%s\n' "${base_migrations[@]}" | sed -n 's/^V\([0-9]\{3\}\)_.*/\1/p' | sort -n | tail -1)
 
+# A version claimed by two files on the base branch is one Flyway can never apply: it
+# refuses to run anything while the clash stands, so neither file reaches a database.
+# Removing one of them is the only repair, and the immutability check below must not
+# report that as a rule 1 violation. Rule 1 protects migrations a database has run.
+base_duplicates=$(printf '%s\n' "${base_migrations[@]}" | sed -n 's/^V\([0-9]\{3\}\)_.*/\1/p' | sort | uniq -d)
+
 # ------------------------------------------------------------- ordering
 # Flyway applies versions in order. A new migration numbered below what the target
 # database has already reached is an out-of-order migration: it is skipped on databases
@@ -107,6 +113,11 @@ changed=0
 for file in "${base_migrations[@]}"; do
     [ -z "$file" ] && continue
     if [ ! -f "$MIGRATION_DIR/$file" ]; then
+        version=$(printf '%s' "$file" | sed -n 's/^V\([0-9]\{3\}\)_.*/\1/p')
+        if [ -n "$version" ] && printf '%s\n' "$base_duplicates" | grep -qx "$version"; then
+            pass "$file was removed - V$version is claimed twice on $BASE_REF, so no database ran it"
+            continue
+        fi
         fail "$file was deleted - published migrations must stay (rule 1); use a forward-fix migration"
         changed=1
         continue
