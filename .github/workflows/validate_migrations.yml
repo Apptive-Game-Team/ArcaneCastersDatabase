@@ -31,7 +31,16 @@ jobs:
     runs-on: ubuntu-latest
     # A fork pull request cannot read the secrets, and failing the job for that reason
     # would say nothing about the change.
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    #
+    # DEV_DB_URL is the main track's database: dev_migration.yml migrates it on a push to
+    # main and nothing migrates it for magic-card. Comparing a magic-card tree against it
+    # reports main's V091-V101 as applied-but-missing and magic-card's own V083-V090 as
+    # resolved-but-not-applied, neither of which says anything about the pull request. The
+    # magic-card track has no database of its own yet; when it gets one, point this job at
+    # it instead of skipping.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository
+      && github.base_ref != 'magic-card'
 
     steps:
       - name: Checkout repository
