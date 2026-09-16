@@ -37,7 +37,7 @@ request instead of relying on a runtime check: there is no runtime symptom to no
    `WHERE NOT EXISTS`, because a data migration must be safe on a database where the rows
    already exist (rule 3).
 4. Register the object itself: `game_objects`, its `parameters` and `parameter_values`, and
-   the `magics` / `magic_cards` recipe when the object is castable.
+   the `magics` recipe when the object is castable.
 5. **Tag the object.** Insert into `game_object_tags` for every axis that applies:
    - `TYPE_Unit` — always, for anything that stands on the field.
    - Size: `CAT_Small`, `CAT_Medium`, `CAT_Large`.
