@@ -2,18 +2,43 @@
 --
 -- Applying this file to an empty PostgreSQL 14 database produces the schema at the tip of
 -- `dev` (last migration V119_20260916__widen_dragon_tower_range_and_repair_totem_life.sql)
--- together with the game definition rows.
+-- together with the game definition rows, minus the four card tables that the next section
+-- drops and renames.
 --
 -- It was built by replaying that chain into an empty database and dumping the result, then
 -- overlaying the values that live only in `wordonlinedev`. The schema is what the chain
--- produced; the sections below list every row that is not.
+-- produced; the sections below list every row that is not, and every object that is not.
+--
+-- ------------------------------------------ what this file changes against the chain tip
+--
+-- The chain tip still carries four tables from the card era. The game server reads a deck
+-- as magic ids and writes them into statistic_game_cards.card_id, whose foreign key points
+-- at cards(id). `cards` holds 11 rows with ids 1 through 11, so every magic outside that
+-- range fails the insert. The starter deck is magma_explosion 19, leafair 24,
+-- lightning_drop 35, rock_drop 54 and chicken_commando 55, and every player and every bot
+-- starts with it, so the foreign key fails the first time any match ends.
+--
+--   Dropped: `cards` (11 rows), `magic_cards` (168 rows) and `user_cards` (empty), with
+--   their sequences, indexes, constraints and the update_magic_cards_modtime trigger. The
+--   game server's MagicRepository already records that magic_cards and cards are gone, and
+--   the lobby's Card and UserCard classes map to `magics` and `user_magics`.
+--
+--   Renamed: `statistic_game_cards` to `statistic_game_decks`, its `card_id` column to
+--   `magic_id`, its sequence to statistic_game_decks_id_seq and its index to
+--   idx_statistic_game_deck_user_id_statistic_game_id. The foreign key now points at
+--   magics(id); the one to statistic_games(id) ON DELETE CASCADE is unchanged. The table
+--   records which deck a player brought to a match, which statistic_game_magics (how many
+--   times each magic was cast) does not, so it survives. It is empty, so nothing migrates.
+--
+--   Kept: the `card_type` enum. Nothing uses it once `cards` is gone, and dropping an
+--   otherwise harmless type is a separate decision.
 --
 -- ---------------------------------------------------------------------------- rows present
 --
 --   Game definition: magics, game_objects, prefab_elements, parameters, parameter_values,
---   cards, magic_cards, deck_cards, tags, game_object_tags, magic_tags, tag_counter_rules,
---   magic_parameters, magic_game_object_aliases, adventures, stages, scenarios, the four
---   pve_scenario_* tables, quests, reward_params, decorations.
+--   deck_cards, tags, game_object_tags, magic_tags, tag_counter_rules, magic_parameters,
+--   magic_game_object_aliases, adventures, stages, scenarios, the four pve_scenario_*
+--   tables, quests, reward_params, decorations.
 --
 --   `users` carries the 58 bot rows only, at the ids wordonlinedev uses (-62 .. -1). Every
 --   one is negative, which is the bot identity contract in README.md, and
@@ -22,8 +47,8 @@
 --   take positive ids and never meet the bot range. `decks`, `deck_cards` and `user_magics`
 --   likewise hold bot-owned rows plus the starter deck template at `decks.user_id = 0`.
 --
---   No real player data. `user_cards`, `user_decorations`, `user_quests`, `user_scenarios`,
---   `statistic_games`, `statistic_game_cards`, `statistic_game_magics`,
+--   No real player data. `user_decorations`, `user_quests`, `user_scenarios`,
+--   `statistic_games`, `statistic_game_decks`, `statistic_game_magics`,
 --   `statistic_game_sessions`, `statistic_update_time`, `servers` and `deploy_status` are
 --   created empty.
 --
@@ -37,24 +62,23 @@
 --      damage by 10, V054 was ordered after it and inserted `player` hp as a literal 100,
 --      and the live databases carry the hand-fixed 1000. A baseline built from the files
 --      alone would give every player a tenth of their intended health.
---   2. cards.game_object_id on all 11 rows, and the unlock gate on `Wind` (WIN_COUNT 5) and
---      `Drop` (WIN_COUNT 10). V001 inserts only (id, name, card_type); nothing else ever
---      writes these columns.
---   3. magic_tags: meteor_shower carries CAT_AoE. The game object holds only TYPE_Data, so
+--   2. magic_tags: meteor_shower carries CAT_AoE. The game object holds only TYPE_Data, so
 --      sync_magic_tags_from_game_objects() cannot derive it. Without the tag the bot counter
 --      evaluator scores meteor_shower 0.0 and never reasons about it.
---   4. tag_counter_rules: CAT_AoE against CAT_Small weighs 1, not the 2 the chain writes.
---   5. The 12 bots that predate the chain (ids -1 and -6 .. -16), which reached the live
+--   3. tag_counter_rules: CAT_AoE against CAT_Small weighs 1, not the 2 the chain writes.
+--   4. The 12 bots that predate the chain (ids -1 and -6 .. -16), which reached the live
 --      databases through bot_personas_legacy_20260711. All 12 are `enabled = false`.
 --      Their identity is the live row; their mmr and total_wins are not, because the chain
 --      seeds every bot at 1000/0 and the live numbers drifted over months of play.
---   6. The starter deck template `decks.user_id = 0`, which V062 requires and no migration
+--   5. The starter deck template `decks.user_id = 0`, which V062 requires and no migration
 --      creates. It predates the chain.
---   7. quests, reward_params, adventures, stages, scenarios, pve_scenario_* and decorations
+--   6. quests, reward_params, adventures, stages, scenarios, pve_scenario_* and decorations
 --      -- 56 rows of definition data that no migration inserts.
---   8. The update_magic_cards_modtime and update_parameter_values_modtime triggers. V000
---      carries update_updated_at_column() but not the CREATE TRIGGER statements, so the
---      chain tip has neither. parameter_values.updated_at is what made item 1 findable.
+--   7. The update_parameter_values_modtime trigger. V000 carries
+--      update_updated_at_column() but not the CREATE TRIGGER statement, so the chain tip
+--      has neither. parameter_values.updated_at is what made item 1 findable.
+--      The chain tip's other overlaid trigger, update_magic_cards_modtime, went out with
+--      `magic_cards`.
 --
 -- --------------------------------------------- where the live value was deliberately NOT taken
 --
@@ -278,21 +302,6 @@ CREATE SEQUENCE "public"."bot_user_id_seq"
 
 
 --
--- Name: cards; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE "public"."cards" (
-    "id" bigint NOT NULL,
-    "name" character varying(10) NOT NULL,
-    "card_type" "public"."card_type" NOT NULL,
-    "game_object_id" bigint,
-    "unlock_condition_type" character varying(31),
-    "unlock_required_value" integer,
-    "access_type" character varying(10) DEFAULT 'DEFAULT'::character varying NOT NULL
-);
-
-
---
 -- Name: deck_cards; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -470,37 +479,6 @@ CREATE SEQUENCE "public"."game_objects_id_seq"
 --
 
 ALTER SEQUENCE "public"."game_objects_id_seq" OWNED BY "public"."game_objects"."id";
-
-
---
--- Name: magic_cards; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE "public"."magic_cards" (
-    "id" bigint NOT NULL,
-    "magic_id" bigint,
-    "card_id" bigint,
-    "updated_at" timestamp without time zone DEFAULT "now"()
-);
-
-
---
--- Name: magic_cards_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE "public"."magic_cards_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: magic_cards_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE "public"."magic_cards_id_seq" OWNED BY "public"."magic_cards"."id";
 
 
 --
@@ -962,23 +940,23 @@ ALTER SEQUENCE "public"."stages_id_seq" OWNED BY "public"."stages"."id";
 
 
 --
--- Name: statistic_game_cards; Type: TABLE; Schema: public; Owner: -
+-- Name: statistic_game_decks; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE "public"."statistic_game_cards" (
+CREATE TABLE "public"."statistic_game_decks" (
     "id" bigint NOT NULL,
     "user_id" bigint NOT NULL,
     "statistic_game_id" bigint NOT NULL,
-    "card_id" bigint NOT NULL,
+    "magic_id" bigint NOT NULL,
     "count" integer
 );
 
 
 --
--- Name: statistic_game_cards_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: statistic_game_decks_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE "public"."statistic_game_cards_id_seq"
+CREATE SEQUENCE "public"."statistic_game_decks_id_seq"
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -987,10 +965,10 @@ CREATE SEQUENCE "public"."statistic_game_cards_id_seq"
 
 
 --
--- Name: statistic_game_cards_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: statistic_game_decks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE "public"."statistic_game_cards_id_seq" OWNED BY "public"."statistic_game_cards"."id";
+ALTER SEQUENCE "public"."statistic_game_decks_id_seq" OWNED BY "public"."statistic_game_decks"."id";
 
 
 --
@@ -1210,37 +1188,6 @@ CREATE SEQUENCE "public"."user_adventures_id_seq"
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
-
-
---
--- Name: user_cards; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE "public"."user_cards" (
-    "id" bigint NOT NULL,
-    "user_id" bigint NOT NULL,
-    "card_id" bigint NOT NULL,
-    "count" integer DEFAULT 1 NOT NULL
-);
-
-
---
--- Name: user_cards_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE "public"."user_cards_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: user_cards_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE "public"."user_cards_id_seq" OWNED BY "public"."user_cards"."id";
 
 
 --
@@ -1464,13 +1411,6 @@ ALTER TABLE ONLY "public"."game_objects" ALTER COLUMN "id" SET DEFAULT "nextval"
 
 
 --
--- Name: magic_cards id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."magic_cards" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."magic_cards_id_seq"'::"regclass");
-
-
---
 -- Name: magic_parameters id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1562,10 +1502,10 @@ ALTER TABLE ONLY "public"."stages" ALTER COLUMN "id" SET DEFAULT "nextval"('"pub
 
 
 --
--- Name: statistic_game_cards id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: statistic_game_decks id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY "public"."statistic_game_cards" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."statistic_game_cards_id_seq"'::"regclass");
+ALTER TABLE ONLY "public"."statistic_game_decks" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."statistic_game_decks_id_seq"'::"regclass");
 
 
 --
@@ -1608,13 +1548,6 @@ ALTER TABLE ONLY "public"."tag_counter_rules" ALTER COLUMN "id" SET DEFAULT "nex
 --
 
 ALTER TABLE ONLY "public"."tags" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."tags_id_seq"'::"regclass");
-
-
---
--- Name: user_cards id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."user_cards" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."user_cards_id_seq"'::"regclass");
 
 
 --
@@ -1721,23 +1654,6 @@ INSERT INTO "public"."bot_personas" ("user_id", "name", "tier", "thinking_time_m
 INSERT INTO "public"."bot_personas" ("user_id", "name", "tier", "thinking_time_ms", "reaction_interval_frames", "counter_aggression", "enabled", "created_at", "updated_at", "hospitality") VALUES (-14, 'Advanced Bot B', 'ADVANCED', 240, 5, 0.7, false, '2026-09-16 10:11:17.919237', '2026-09-16 10:11:17.919237', false);
 INSERT INTO "public"."bot_personas" ("user_id", "name", "tier", "thinking_time_ms", "reaction_interval_frames", "counter_aggression", "enabled", "created_at", "updated_at", "hospitality") VALUES (-15, 'Elite Bot A', 'ELITE', 180, 3, 0.85, false, '2026-09-16 10:11:17.919237', '2026-09-16 10:11:17.919237', false);
 INSERT INTO "public"."bot_personas" ("user_id", "name", "tier", "thinking_time_ms", "reaction_interval_frames", "counter_aggression", "enabled", "created_at", "updated_at", "hospitality") VALUES (-16, 'Elite Bot B', 'ELITE', 160, 3, 0.95, false, '2026-09-16 10:11:17.919237', '2026-09-16 10:11:17.919237', false);
-
-
---
--- Data for Name: cards; Type: TABLE DATA; Schema: public; Owner: -
---
-
-INSERT INTO "public"."cards" ("id", "name", "card_type", "game_object_id", "unlock_condition_type", "unlock_required_value", "access_type") VALUES (1, 'Fire', 'Type', 127, NULL, NULL, 'DEFAULT');
-INSERT INTO "public"."cards" ("id", "name", "card_type", "game_object_id", "unlock_condition_type", "unlock_required_value", "access_type") VALUES (2, 'Water', 'Type', 194, NULL, NULL, 'DEFAULT');
-INSERT INTO "public"."cards" ("id", "name", "card_type", "game_object_id", "unlock_condition_type", "unlock_required_value", "access_type") VALUES (3, 'Lightning', 'Type', 148, NULL, NULL, 'DEFAULT');
-INSERT INTO "public"."cards" ("id", "name", "card_type", "game_object_id", "unlock_condition_type", "unlock_required_value", "access_type") VALUES (4, 'Rock', 'Type', 167, NULL, NULL, 'DEFAULT');
-INSERT INTO "public"."cards" ("id", "name", "card_type", "game_object_id", "unlock_condition_type", "unlock_required_value", "access_type") VALUES (5, 'Nature', 'Type', 158, NULL, NULL, 'DEFAULT');
-INSERT INTO "public"."cards" ("id", "name", "card_type", "game_object_id", "unlock_condition_type", "unlock_required_value", "access_type") VALUES (6, 'Shoot', 'Magic', 2, NULL, NULL, 'DEFAULT');
-INSERT INTO "public"."cards" ("id", "name", "card_type", "game_object_id", "unlock_condition_type", "unlock_required_value", "access_type") VALUES (7, 'Build', 'Magic', 5, NULL, NULL, 'DEFAULT');
-INSERT INTO "public"."cards" ("id", "name", "card_type", "game_object_id", "unlock_condition_type", "unlock_required_value", "access_type") VALUES (8, 'Spawn', 'Magic', 4, NULL, NULL, 'DEFAULT');
-INSERT INTO "public"."cards" ("id", "name", "card_type", "game_object_id", "unlock_condition_type", "unlock_required_value", "access_type") VALUES (9, 'Explode', 'Magic', 3, NULL, NULL, 'DEFAULT');
-INSERT INTO "public"."cards" ("id", "name", "card_type", "game_object_id", "unlock_condition_type", "unlock_required_value", "access_type") VALUES (10, 'Wind', 'Type', 201, 'WIN_COUNT', 5, 'DEFAULT');
-INSERT INTO "public"."cards" ("id", "name", "card_type", "game_object_id", "unlock_condition_type", "unlock_required_value", "access_type") VALUES (11, 'Drop', 'Magic', 116, 'WIN_COUNT', 10, 'DEFAULT');
 
 
 --
@@ -2606,180 +2522,6 @@ INSERT INTO "public"."game_objects" ("id", "name") VALUES (234, 'ground_tidal_wa
 INSERT INTO "public"."game_objects" ("id", "name") VALUES (235, 'boulder_strike');
 INSERT INTO "public"."game_objects" ("id", "name") VALUES (236, 'bomb_sprite');
 INSERT INTO "public"."game_objects" ("id", "name") VALUES (237, 'bomb_sprite_bomb');
-
-
---
--- Data for Name: magic_cards; Type: TABLE DATA; Schema: public; Owner: -
---
-
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (43, 65, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (44, 64, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (45, 59, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (46, 57, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (47, 44, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (48, 44, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (49, 39, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (51, 32, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (52, 23, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (53, 21, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (54, 21, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (55, 19, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (56, 7, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (57, 1, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (58, 68, 2, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (59, 62, 2, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (60, 46, 2, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (61, 40, 2, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (62, 30, 2, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (63, 28, 2, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (64, 20, 2, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (65, 8, 2, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (66, 2, 2, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (67, 67, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (68, 67, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (69, 65, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (70, 63, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (71, 60, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (72, 58, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (73, 47, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (74, 35, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (75, 31, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (76, 30, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (77, 27, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (78, 9, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (79, 66, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (80, 54, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (81, 51, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (82, 44, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (83, 44, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (84, 41, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (85, 39, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (86, 29, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (87, 29, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (88, 26, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (89, 25, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (90, 17, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (91, 11, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (92, 3, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (93, 56, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (94, 50, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (95, 50, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (96, 49, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (97, 48, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (98, 48, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (99, 43, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (100, 40, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (101, 27, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (102, 24, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (103, 23, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (104, 21, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (105, 16, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (106, 10, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (107, 4, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (108, 51, 6, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (109, 49, 6, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (110, 28, 6, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (111, 25, 6, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (112, 21, 6, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (113, 12, 6, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (114, 11, 6, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (115, 10, 6, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (116, 9, 6, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (117, 8, 6, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (118, 7, 6, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (119, 66, 7, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (120, 63, 7, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (121, 62, 7, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (122, 57, 7, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (123, 50, 7, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (124, 40, 7, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (125, 27, 7, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (126, 26, 7, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (127, 25, 7, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (128, 18, 7, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (129, 17, 7, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (130, 16, 7, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (131, 68, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (132, 66, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (133, 65, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (134, 65, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (135, 64, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (136, 64, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (137, 58, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (138, 51, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (139, 49, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (140, 48, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (141, 47, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (142, 46, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (143, 43, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (144, 39, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (145, 32, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (146, 31, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (147, 30, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (148, 29, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (149, 28, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (150, 5, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (151, 4, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (152, 3, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (153, 2, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (154, 1, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (156, 67, 9, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (157, 61, 9, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (158, 60, 9, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (159, 56, 9, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (160, 41, 9, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (161, 39, 9, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (162, 26, 9, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (163, 20, 9, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (164, 19, 9, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (165, 68, 10, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (166, 64, 10, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (167, 61, 10, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (168, 55, 10, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (169, 46, 10, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (170, 43, 10, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (171, 43, 10, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (172, 43, 10, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (173, 32, 10, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (174, 31, 10, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (175, 18, 10, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (176, 12, 10, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (177, 5, 10, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (179, 55, 11, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (180, 54, 11, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (181, 47, 11, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (182, 44, 11, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (183, 35, 11, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (184, 24, 11, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (185, 23, 11, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (186, 69, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (187, 69, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (188, 69, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (189, 69, 9, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (190, 69, 9, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (191, 70, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (192, 70, 7, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (193, 70, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (194, 57, 4, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (195, 59, 7, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (196, 64, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (197, 46, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (198, 71, 1, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (199, 71, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (200, 71, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (201, 71, 5, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (202, 71, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (203, 72, 2, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (204, 72, 2, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (205, 72, 2, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (206, 72, 6, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (207, 72, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (208, 73, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (209, 73, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (210, 73, 3, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (211, 73, 6, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (212, 73, 8, '2026-09-16 10:06:03.273482');
-INSERT INTO "public"."magic_cards" ("id", "magic_id", "card_id", "updated_at") VALUES (213, 46, 6, '2026-09-16 10:06:03.273482');
 
 
 --
@@ -5002,13 +4744,6 @@ SELECT pg_catalog.setval('"public"."game_objects_id_seq"', 237, true);
 
 
 --
--- Name: magic_cards_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
---
-
-SELECT pg_catalog.setval('"public"."magic_cards_id_seq"', 213, true);
-
-
---
 -- Name: magic_parameters_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
@@ -5100,10 +4835,10 @@ SELECT pg_catalog.setval('"public"."stages_id_seq"', 1, true);
 
 
 --
--- Name: statistic_game_cards_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+-- Name: statistic_game_decks_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('"public"."statistic_game_cards_id_seq"', 1, false);
+SELECT pg_catalog.setval('"public"."statistic_game_decks_id_seq"', 1, false);
 
 
 --
@@ -5153,13 +4888,6 @@ SELECT pg_catalog.setval('"public"."tags_id_seq"', 13, true);
 --
 
 SELECT pg_catalog.setval('"public"."user_adventures_id_seq"', 1, false);
-
-
---
--- Name: user_cards_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
---
-
-SELECT pg_catalog.setval('"public"."user_cards_id_seq"', 1, false);
 
 
 --
@@ -5218,14 +4946,6 @@ ALTER TABLE ONLY "public"."adventures"
 
 ALTER TABLE ONLY "public"."bot_personas"
     ADD CONSTRAINT "bot_personas_pkey" PRIMARY KEY ("user_id");
-
-
---
--- Name: cards cards_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."cards"
-    ADD CONSTRAINT "cards_pkey" PRIMARY KEY ("id");
 
 
 --
@@ -5290,14 +5010,6 @@ ALTER TABLE ONLY "public"."game_objects"
 
 ALTER TABLE ONLY "public"."game_objects"
     ADD CONSTRAINT "game_objects_pkey" PRIMARY KEY ("id");
-
-
---
--- Name: magic_cards magic_cards_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."magic_cards"
-    ADD CONSTRAINT "magic_cards_pkey" PRIMARY KEY ("id");
 
 
 --
@@ -5437,11 +5149,11 @@ ALTER TABLE ONLY "public"."stages"
 
 
 --
--- Name: statistic_game_cards statistic_game_cards_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: statistic_game_decks statistic_game_decks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY "public"."statistic_game_cards"
-    ADD CONSTRAINT "statistic_game_cards_pkey" PRIMARY KEY ("id");
+ALTER TABLE ONLY "public"."statistic_game_decks"
+    ADD CONSTRAINT "statistic_game_decks_pkey" PRIMARY KEY ("id");
 
 
 --
@@ -5581,22 +5293,6 @@ ALTER TABLE ONLY "public"."user_magics"
 
 
 --
--- Name: user_cards user_cards_card_id_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."user_cards"
-    ADD CONSTRAINT "user_cards_card_id_user_id_key" UNIQUE ("card_id", "user_id");
-
-
---
--- Name: user_cards user_cards_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."user_cards"
-    ADD CONSTRAINT "user_cards_pkey" PRIMARY KEY ("id");
-
-
---
 -- Name: user_decorations user_decorations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5651,13 +5347,6 @@ CREATE INDEX "idx_bot_personas_hospitality" ON "public"."bot_personas" USING "bt
 
 
 --
--- Name: idx_magic_cards_updated_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "idx_magic_cards_updated_at" ON "public"."magic_cards" USING "btree" ("updated_at");
-
-
---
 -- Name: idx_magic_parameters_magic; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5693,10 +5382,10 @@ CREATE INDEX "idx_servers_type_state" ON "public"."servers" USING "btree" ("type
 
 
 --
--- Name: idx_statistic_game_card_user_id_statistic_game_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_statistic_game_deck_user_id_statistic_game_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX "idx_statistic_game_card_user_id_statistic_game_id" ON "public"."statistic_game_cards" USING "btree" ("user_id", "statistic_game_id");
+CREATE INDEX "idx_statistic_game_deck_user_id_statistic_game_id" ON "public"."statistic_game_decks" USING "btree" ("user_id", "statistic_game_id");
 
 
 --
@@ -5735,13 +5424,6 @@ CREATE INDEX "idx_users_novice_progress" ON "public"."users" USING "btree" ("nov
 
 
 --
--- Name: magic_cards update_magic_cards_modtime; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER "update_magic_cards_modtime" BEFORE UPDATE ON "public"."magic_cards" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
-
-
---
 -- Name: parameter_values update_parameter_values_modtime; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -5754,14 +5436,6 @@ CREATE TRIGGER "update_parameter_values_modtime" BEFORE UPDATE ON "public"."para
 
 ALTER TABLE ONLY "public"."bot_personas"
     ADD CONSTRAINT "bot_personas_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
-
-
---
--- Name: cards cards_game_object_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."cards"
-    ADD CONSTRAINT "cards_game_object_id_fkey" FOREIGN KEY ("game_object_id") REFERENCES "public"."game_objects"("id");
 
 
 --
@@ -5810,30 +5484,6 @@ ALTER TABLE ONLY "public"."game_object_tags"
 
 ALTER TABLE ONLY "public"."game_object_tags"
     ADD CONSTRAINT "game_object_tags_tag_id_fkey" FOREIGN KEY ("tag_id") REFERENCES "public"."tags"("id");
-
-
---
--- Name: magic_cards magic_cards_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."magic_cards"
-    ADD CONSTRAINT "magic_cards_card_id_fkey" FOREIGN KEY ("card_id") REFERENCES "public"."cards"("id");
-
-
---
--- Name: magic_cards magic_cards_magic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."magic_cards"
-    ADD CONSTRAINT "magic_cards_magic_id_fkey" FOREIGN KEY ("magic_id") REFERENCES "public"."magics"("id");
-
-
---
--- Name: magic_cards magic_cards_magic_id_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."magic_cards"
-    ADD CONSTRAINT "magic_cards_magic_id_fkey1" FOREIGN KEY ("magic_id") REFERENCES "public"."magics"("id") ON DELETE CASCADE;
 
 
 --
@@ -5925,19 +5575,19 @@ ALTER TABLE ONLY "public"."stages"
 
 
 --
--- Name: statistic_game_cards statistic_game_cards_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: statistic_game_decks statistic_game_decks_magic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY "public"."statistic_game_cards"
-    ADD CONSTRAINT "statistic_game_cards_card_id_fkey" FOREIGN KEY ("card_id") REFERENCES "public"."cards"("id");
+ALTER TABLE ONLY "public"."statistic_game_decks"
+    ADD CONSTRAINT "statistic_game_decks_magic_id_fkey" FOREIGN KEY ("magic_id") REFERENCES "public"."magics"("id");
 
 
 --
--- Name: statistic_game_cards statistic_game_cards_statistic_game_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: statistic_game_decks statistic_game_decks_statistic_game_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY "public"."statistic_game_cards"
-    ADD CONSTRAINT "statistic_game_cards_statistic_game_id_fkey" FOREIGN KEY ("statistic_game_id") REFERENCES "public"."statistic_games"("id") ON DELETE CASCADE;
+ALTER TABLE ONLY "public"."statistic_game_decks"
+    ADD CONSTRAINT "statistic_game_decks_statistic_game_id_fkey" FOREIGN KEY ("statistic_game_id") REFERENCES "public"."statistic_games"("id") ON DELETE CASCADE;
 
 
 --
@@ -5986,14 +5636,6 @@ ALTER TABLE ONLY "public"."tag_counter_rules"
 
 ALTER TABLE ONLY "public"."tag_counter_rules"
     ADD CONSTRAINT "tag_counter_rules_target_tag_id_fkey" FOREIGN KEY ("target_tag_id") REFERENCES "public"."tags"("id");
-
-
---
--- Name: user_cards user_cards_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY "public"."user_cards"
-    ADD CONSTRAINT "user_cards_card_id_fkey" FOREIGN KEY ("card_id") REFERENCES "public"."cards"("id");
 
 
 --
