@@ -4,7 +4,7 @@
 -- 마법 하나를 만들 때 카드를 몇 장 썼는지가 그 마법의 무게를 그대로 나타내므로, 장수를 그대로
 -- 등급으로 쓴다. 지금 값은 20 에서 60 사이에 몰려 있어서 2장짜리와 5장짜리의 차이가 3배밖에 안 된다.
 --
---   2장 28개 -> 10
+--   2장 28개 -> 10, 15
 --   3장 28개 -> 20 ~ 40
 --   4장  6개 -> 30 ~ 50
 --   5장  8개 -> 70, 80
@@ -30,11 +30,10 @@ CREATE TEMP TABLE mana_tier (
 
 INSERT INTO mana_tier(magic_name, card_count, mana_cost)
 VALUES
-    -- 2장 28개. 구간이 값 하나라 소환수와 마법을 나눌 자리가 없다. 전부 10 이다.
+    -- 2장 28개. 던지면 그 자리에서 끝나는 마법 15개가 10 이다.
     ('magma_explosion', 2, 10),
     ('leafair', 2, 10),
     ('lightning_drop', 2, 10),
-    ('chicken_commando', 2, 10),
     ('water_explosion', 2, 10),
     ('lightning_explosion', 2, 10),
     ('sand_storm', 2, 10),
@@ -47,18 +46,23 @@ VALUES
     ('rock_rolling', 2, 10),
     ('wind_blade', 2, 10),
     ('vine_toss', 2, 10),
-    ('ember_spirit_swarm', 2, 10),
-    ('mini_rock_swarm', 2, 10),
-    ('seed_spirit_swarm', 2, 10),
-    ('water_slime_swarm', 2, 10),
-    ('wind_spirit', 2, 10),
-    ('zap_mouse', 2, 10),
-    ('life_tree', 2, 10),
-    ('bubble_generator', 2, 10),
-    ('rallying_totem', 2, 10),
-    ('rock_turret', 2, 10),
-    ('electric_tower', 2, 10),
-    ('wind_totem', 2, 10),
+    -- 2장 소환 13개는 15 다. 필드에 몸이 남아서 상대가 따로 부숴야 사라진다. 건물 6개는
+    -- duration 동안 계속 일하고(electric_tower 20초 hp 160, bubble_generator 12초 hp 180),
+    -- 소환수 7개는 hp 20 에서 150 짜리 몸이 1마리에서 5마리까지 나온다. chicken_commando 는
+    -- cast_kind 가 Drop 이지만 hp 120 damage 30 짜리 몸을 떨어뜨리므로 여기 둔다.
+    ('life_tree', 2, 15),
+    ('bubble_generator', 2, 15),
+    ('rallying_totem', 2, 15),
+    ('rock_turret', 2, 15),
+    ('electric_tower', 2, 15),
+    ('wind_totem', 2, 15),
+    ('ember_spirit_swarm', 2, 15),
+    ('mini_rock_swarm', 2, 15),
+    ('seed_spirit_swarm', 2, 15),
+    ('water_slime_swarm', 2, 15),
+    ('wind_spirit', 2, 15),
+    ('zap_mouse', 2, 15),
+    ('chicken_commando', 2, 15),
 
     -- 3장, 직접 마법 4개. 20 이 한 점을 때리는 쪽, 25 가 큰 한 방이다.
     -- shock_overload 는 damage 80 에 radius 0.5, frenzy_totem 은 피해가 없고 10초짜리 공격속도
