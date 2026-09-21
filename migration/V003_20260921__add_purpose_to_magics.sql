@@ -2,9 +2,13 @@
 -- leftover the game server no longer implements, and the three need different handling: only
 -- PLAYER rows belong in the magic book and in a new account's grant.
 --
--- access_type does not answer this. It says whether a row ships to a new account for free, which
--- is a different axis: a paid or unlockable player card is not 'DEFAULT' and still belongs in the
--- book. Overloading it would hide such a card the day one is added.
+-- access_type does not answer this. It says how a row reaches a player, which is a different
+-- axis: a paid or unlockable player card is not 'DEFAULT' and still belongs in the book.
+-- Overloading it would hide such a card the day one is added.
+--
+-- The two still have to agree. A row that is not a player card has no way to reach a player at
+-- all, so this migration also moves those rows off 'DEFAULT' and onto 'NONE'. 'DEFAULT' on a PvE
+-- row is what granted it to every new account in the first place.
 --
 -- The column is named purpose rather than kind because magics already carries cast_kind, and two
 -- columns whose names differ by a prefix read as two halves of one value.
@@ -17,6 +21,9 @@ ALTER TABLE magics
 
 ALTER TABLE magics
     ADD CONSTRAINT chk_magics_purpose CHECK (purpose IN ('PLAYER', 'PVE', 'LEGACY'));
+
+COMMENT ON COLUMN magics.access_type IS
+    'How this magic reaches a player: DEFAULT (granted to every new account) or NONE (never obtainable, for rows whose purpose is not PLAYER). Says nothing about whether the row belongs in the magic book; purpose answers that.';
 
 COMMENT ON COLUMN magics.purpose IS
     'What this row is for: PLAYER (a card a player can hold and cast), PVE (PvE and bot content, never offered to a player), LEGACY (kept for history, not implemented on the game server). The magic book listing and the default-grant query take PLAYER only, and read this column rather than access_type.';
@@ -34,19 +41,28 @@ COMMENT ON COLUMN magics.purpose IS
 -- would keep showing the magic.
 UPDATE magics
 SET purpose = 'PVE',
+    access_type = 'NONE',
     updated_at = now()
 WHERE name = 'pve_nature_slime_nest'
-  AND purpose IS DISTINCT FROM 'PVE';
+  AND (purpose IS DISTINCT FROM 'PVE' OR access_type IS DISTINCT FROM 'NONE');
 
--- water_slime_nest (id 15) stays PLAYER for now although the game server has no bean for it
--- either. Whether it is LEGACY or a live magic whose bean was renamed to pve_water_slime_nest is
--- the open question about the whole slime nest family -- two rows against six beans -- and that
--- is being decided separately.
+-- water_slime_nest is LEGACY. The game server carries no magic bean of that name either: the
+-- slime nest family is fire, nature, rock, wind and lightning plus pve_water_slime_nest, and
+-- this row is the only one of the six with no implementation behind it. A player holding it
+-- could not cast it, so it comes out of the magic book and out of every player's list. Whether
+-- the water nest should come back as a player card is a question about that whole family, and
+-- LEGACY is the honest description until it is answered.
+UPDATE magics
+SET purpose = 'LEGACY',
+    access_type = 'NONE',
+    updated_at = now()
+WHERE name = 'water_slime_nest'
+  AND (purpose IS DISTINCT FROM 'LEGACY' OR access_type IS DISTINCT FROM 'NONE');
 
--- A magic that is not a player card must not be left in a player's unlocked list or in a deck.
--- Zero rows are expected against the current dev snapshot -- nothing references
--- pve_nature_slime_nest there -- but a production database may have granted or decked it before
--- this migration ran.
+-- Moving the two rows off 'DEFAULT' stops the next account from receiving them; it does nothing
+-- about the accounts that already hold them. Take them back here. Zero rows are expected against
+-- the current dev snapshot -- nothing references either row there -- but a production database
+-- may have granted or decked them before this migration ran.
 DO
 $$
     DECLARE
