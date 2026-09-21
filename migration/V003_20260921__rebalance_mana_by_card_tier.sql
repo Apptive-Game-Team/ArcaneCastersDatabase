@@ -6,7 +6,7 @@
 --
 --   2장 28개 -> 10, 15
 --   3장 28개 -> 20 ~ 40
---   4장  6개 -> 30 ~ 50
+--   4장  6개 -> 40 ~ 55
 --   5장  8개 -> 70, 80
 --
 -- 구간 안에서는 소환수가 위쪽, 직접 피해를 주는 마법이 아래쪽이다. 건물과 토템은 그 사이에 둔다.
@@ -107,10 +107,9 @@ VALUES
     ('rock_mage', 3, 40),
     ('vine_spirit', 3, 40),
 
-    -- 4장 6개. 마법 2개가 40, 소환수 4개가 45 와 50 이다.
-    -- will_o_wisp 는 적 하나를 빼앗고(MindControlShot), spirit_bomb 은 아군 체력을 빨아
-    -- 그 비율만큼 때린다(SpiritBombChannel). 둘 다 판에 무언가 있어야 값을 한다.
-    ('will_o_wisp', 4, 40),
+    -- 4장 6개. spirit_bomb 이 40, 소환수 4개가 45 와 50, will_o_wisp 가 55 다.
+    -- spirit_bomb 은 아군 체력을 빨아 그 비율만큼 때린다(SpiritBombChannel). 판에 아군이
+    -- 있어야 값을 한다.
     ('spirit_bomb', 4, 40),
     -- bomb_sprite 는 hp 200 짜리 자폭, wall_golem 은 hp 1750 에 speed 0.3 이라 벽으로만 쓴다.
     ('bomb_sprite', 4, 45),
@@ -119,6 +118,9 @@ VALUES
     -- damage 80 을 광역으로 때린다. 4장 중 혼자 남아도 이기는 둘이다.
     ('dimension_toad', 4, 50),
     ('magma_spirit', 4, 50),
+    -- will_o_wisp 만 55 로, 4장 구간 위쪽 밖에 둔다. MindControlShot 은 적 하나를 빼앗으므로
+    -- 한 번에 두 몫이 움직인다. 상대 필드에서 빼고 내 필드에 더하는 마법은 이 게임에 이것뿐이다.
+    ('will_o_wisp', 4, 55),
 
     -- 5장 8개. 한 번 쓰고 사라지는 마법 3개가 70, 필드에 남는 소환수 5개가 80 이다.
     ('meteor_shower', 5, 70),
