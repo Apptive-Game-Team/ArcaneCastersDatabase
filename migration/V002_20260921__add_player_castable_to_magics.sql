@@ -15,8 +15,14 @@ COMMENT ON COLUMN magics.player_castable IS
 -- today it both shows up in the magic book and is granted to new accounts. Update by name, and
 -- guard on the current value so this is safe whether the row is already missing or already
 -- false (migration rule 3).
+--
+-- updated_at moves with it. There is no update trigger on magics, and the lobby serves the
+-- magic list against a version taken from max(updated_at) over the whole table. Leaving the
+-- timestamp alone would hide this row from that comparison, and every client that already
+-- cached the list would keep showing the magic.
 UPDATE magics
-SET player_castable = false
+SET player_castable = false,
+    updated_at = now()
 WHERE name = 'pve_nature_slime_nest'
   AND player_castable IS DISTINCT FROM false;
 
