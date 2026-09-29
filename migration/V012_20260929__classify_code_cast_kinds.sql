@@ -9,13 +9,17 @@
 --
 -- The game server never reads cast_kind. In the lobby, only RandomDeckCandidateRepository
 -- does, and it keys on 'Spawn', which none of these rows are or become.
+--
+-- updated_at moves too. There is no update trigger on magics, and the lobby versions the magic
+-- list by max(magics.updated_at): without the bump clients keep their cached list, which also
+-- lacks the castKind field the lobby now serves.
 -- no-tags: this migration registers neither a game object nor a magic.
 
-UPDATE "public"."magics" SET "cast_kind" = 'Summon'
+UPDATE "public"."magics" SET "cast_kind" = 'Summon', "updated_at" = now()
 WHERE "name" IN ('tower', 'cannon') AND "cast_kind" = 'Code';
 
-UPDATE "public"."magics" SET "cast_kind" = 'Shot'
+UPDATE "public"."magics" SET "cast_kind" = 'Shot', "updated_at" = now()
 WHERE "name" = 'wind_blade' AND "cast_kind" = 'Code';
 
-UPDATE "public"."magics" SET "cast_kind" = 'Explosion'
+UPDATE "public"."magics" SET "cast_kind" = 'Explosion', "updated_at" = now()
 WHERE "name" = 'wind_explosion' AND "cast_kind" = 'Code';
