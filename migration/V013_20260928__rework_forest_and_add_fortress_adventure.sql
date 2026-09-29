@@ -28,7 +28,7 @@ INSERT INTO scenarios (id, stage_id) VALUES
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('nest', 'PveNatureSlimeNest', 'RightPlayer', 14, 0, 5, 600, 1, 1);
+    ('nest', 'PveNatureSlimeNest', 'RightPlayer', 14, 0, 5, 800, 1, 1);
 
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
     ('nest', 1, 1);
@@ -55,10 +55,10 @@ INSERT INTO pve_scenario_event_actions
 SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'LeafSlime', 4, NULL::real, 14, 5, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'LeafSlime', 6, NULL::real, 14, 3, NULL::integer),
-    ('wave_3', 1, 'SpawnWave', NULL::text, 'LeafSlime', 6, NULL::real, 14, 7, NULL::integer),
-    ('phase_50', 1, 'SpawnWave', NULL::text, 'LeafSlime', 8, NULL::real, 14, 5, NULL::integer)
+    ('wave_1', 1, 'SpawnWave', NULL::text, 'LeafSlime', 6, NULL::real, 14, 5, NULL::integer),
+    ('wave_2', 1, 'SpawnWave', NULL::text, 'LeafSlime', 9, NULL::real, 14, 3, NULL::integer),
+    ('wave_3', 1, 'SpawnWave', NULL::text, 'LeafSlime', 9, NULL::real, 14, 7, NULL::integer),
+    ('phase_50', 1, 'SpawnWave', NULL::text, 'LeafSlime', 12, NULL::real, 14, 5, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 1;
@@ -67,8 +67,8 @@ JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 1;
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('nature_nest', 'PveNatureSlimeNest', 'RightPlayer', 14, 0, 7, 600, 1, 2),
-    ('water_nest', 'PveWaterSlimeNest', 'RightPlayer', 14, 0, 3, 600, 2, 2);
+    ('nature_nest', 'PveNatureSlimeNest', 'RightPlayer', 14, 0, 7, 800, 1, 2),
+    ('water_nest', 'PveWaterSlimeNest', 'RightPlayer', 14, 0, 3, 800, 2, 2);
 
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
     ('nature_nest', 1, 2),
@@ -95,10 +95,10 @@ INSERT INTO pve_scenario_event_actions
 SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'WaterSlime', 5, NULL::real, 14, 3, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'LeafSlime', 5, NULL::real, 14, 7, NULL::integer),
-    ('nature_dead', 1, 'SetSpawner', 'water_nest', 'WaterSlime', 2, 8, NULL::integer, NULL::integer, NULL::integer),
-    ('nature_dead', 2, 'SpawnWave', NULL::text, 'WaterSlime', 6, NULL::real, 14, 5, NULL::integer)
+    ('wave_1', 1, 'SpawnWave', NULL::text, 'WaterSlime', 8, NULL::real, 14, 3, NULL::integer),
+    ('wave_2', 1, 'SpawnWave', NULL::text, 'LeafSlime', 8, NULL::real, 14, 7, NULL::integer),
+    ('nature_dead', 1, 'SetSpawner', 'water_nest', 'WaterSlime', 3, 8, NULL::integer, NULL::integer, NULL::integer),
+    ('nature_dead', 2, 'SpawnWave', NULL::text, 'WaterSlime', 9, NULL::real, 14, 5, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 2;
@@ -138,12 +138,12 @@ SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.cou
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
     ('intro', 1, 'SetSpawner', 'colony', NULL::text, 0, NULL::real, NULL::integer, NULL::integer, NULL::integer),
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'LeafSlime', 4, NULL::real, 14, 5, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'VineSpirit', 2, NULL::real, 14, 3, NULL::integer),
-    ('wave_3', 1, 'SpawnWave', NULL::text, 'WaterSlime', 6, NULL::real, 14, 7, NULL::integer),
-    ('wave_4', 1, 'SpawnWave', NULL::text, 'VineSpirit', 2, NULL::real, 14, 7, NULL::integer),
-    ('wave_4', 2, 'SpawnWave', NULL::text, 'LeafSlime', 4, NULL::real, 14, 5, NULL::integer),
-    ('wave_5', 1, 'SpawnWave', NULL::text, 'VineSpirit', 3, NULL::real, 14, 5, NULL::integer)
+    ('wave_1', 1, 'SpawnWave', NULL::text, 'LeafSlime', 6, NULL::real, 14, 5, NULL::integer),
+    ('wave_2', 1, 'SpawnWave', NULL::text, 'VineSpirit', 3, NULL::real, 14, 3, NULL::integer),
+    ('wave_3', 1, 'SpawnWave', NULL::text, 'WaterSlime', 9, NULL::real, 14, 7, NULL::integer),
+    ('wave_4', 1, 'SpawnWave', NULL::text, 'VineSpirit', 3, NULL::real, 14, 7, NULL::integer),
+    ('wave_4', 2, 'SpawnWave', NULL::text, 'LeafSlime', 6, NULL::real, 14, 5, NULL::integer),
+    ('wave_5', 1, 'SpawnWave', NULL::text, 'VineSpirit', 5, NULL::real, 14, 5, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 3;
@@ -152,7 +152,7 @@ JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 3;
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('witch', 'PveVineWitch', 'RightPlayer', 14, 0, 5, 1500, 1, 4);
+    ('witch', 'PveVineWitch', 'RightPlayer', 14, 0, 5, 1950, 1, 4);
 
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
     ('witch', 1, 4);
@@ -179,12 +179,12 @@ INSERT INTO pve_scenario_event_actions
 SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'LeafSlime', 4, NULL::real, 14, 3, NULL::integer),
-    ('phase_60', 1, 'SetSpawner', 'witch', 'VineSpirit', 2, 12, NULL::integer, NULL::integer, NULL::integer),
-    ('phase_60', 2, 'SpawnWave', NULL::text, 'LeafSlime', 6, NULL::real, 14, 3, NULL::integer),
-    ('phase_30', 1, 'SetSpawner', 'witch', 'LeafSlime', 2, 8, NULL::integer, NULL::integer, NULL::integer),
-    ('phase_30', 2, 'InstallObject', 'colony_guard', 'PveVineColony', NULL::integer, NULL::real, 14, 7, 400),
-    ('phase_30', 3, 'SpawnWave', NULL::text, 'VineSpirit', 2, NULL::real, 14, 5, NULL::integer)
+    ('wave_1', 1, 'SpawnWave', NULL::text, 'LeafSlime', 6, NULL::real, 14, 3, NULL::integer),
+    ('phase_60', 1, 'SetSpawner', 'witch', 'VineSpirit', 3, 12, NULL::integer, NULL::integer, NULL::integer),
+    ('phase_60', 2, 'SpawnWave', NULL::text, 'LeafSlime', 9, NULL::real, 14, 3, NULL::integer),
+    ('phase_30', 1, 'SetSpawner', 'witch', 'LeafSlime', 3, 8, NULL::integer, NULL::integer, NULL::integer),
+    ('phase_30', 2, 'InstallObject', 'colony_guard', 'PveVineColony', NULL::integer, NULL::real, 14, 7, 500),
+    ('phase_30', 3, 'SpawnWave', NULL::text, 'VineSpirit', 3, NULL::real, 14, 5, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 4;
@@ -193,7 +193,7 @@ JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 4;
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('seed_nest', 'PveNatureSlimeNest', 'RightPlayer', 14, 0, 5, 1000, 1, 5);
+    ('seed_nest', 'PveNatureSlimeNest', 'RightPlayer', 14, 0, 5, 1300, 1, 5);
 
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
     ('seed_nest', 1, 5);
@@ -220,13 +220,13 @@ INSERT INTO pve_scenario_event_actions
 SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
-    ('intro', 1, 'SetSpawner', 'seed_nest', 'SeedSpirit', 3, 12, NULL::integer, NULL::integer, NULL::integer),
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'TreeGolem', 1, NULL::real, 14, 3, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'TreeGolem', 1, NULL::real, 14, 7, NULL::integer),
-    ('wave_2', 2, 'SpawnWave', NULL::text, 'LeafSlime', 4, NULL::real, 14, 5, NULL::integer),
-    ('wave_3', 1, 'SpawnWave', NULL::text, 'SeedSpirit', 4, NULL::real, 14, 3, NULL::integer),
-    ('phase_50', 1, 'SpawnWave', NULL::text, 'TreeGolem', 1, NULL::real, 14, 3, NULL::integer),
-    ('phase_50', 2, 'SpawnWave', NULL::text, 'TreeGolem', 1, NULL::real, 14, 7, NULL::integer)
+    ('intro', 1, 'SetSpawner', 'seed_nest', 'SeedSpirit', 5, 12, NULL::integer, NULL::integer, NULL::integer),
+    ('wave_1', 1, 'SpawnWave', NULL::text, 'TreeGolem', 2, NULL::real, 14, 3, NULL::integer),
+    ('wave_2', 1, 'SpawnWave', NULL::text, 'TreeGolem', 2, NULL::real, 14, 7, NULL::integer),
+    ('wave_2', 2, 'SpawnWave', NULL::text, 'LeafSlime', 6, NULL::real, 14, 5, NULL::integer),
+    ('wave_3', 1, 'SpawnWave', NULL::text, 'SeedSpirit', 6, NULL::real, 14, 3, NULL::integer),
+    ('phase_50', 1, 'SpawnWave', NULL::text, 'TreeGolem', 2, NULL::real, 14, 3, NULL::integer),
+    ('phase_50', 2, 'SpawnWave', NULL::text, 'TreeGolem', 2, NULL::real, 14, 7, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 5;
@@ -235,7 +235,7 @@ JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 5;
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('outer', 'PveVineColony', 'RightPlayer', 14, 0, 5, 600, 1, 6);
+    ('outer', 'PveVineColony', 'RightPlayer', 14, 0, 5, 800, 1, 6);
 
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
     ('outer', 1, 6),
@@ -264,12 +264,12 @@ SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.cou
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
     ('intro', 1, 'SetSpawner', 'outer', NULL::text, 0, NULL::real, NULL::integer, NULL::integer, NULL::integer),
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'VineSpirit', 2, NULL::real, 14, 3, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'VineSpirit', 2, NULL::real, 14, 7, NULL::integer),
-    ('wave_3', 1, 'SpawnWave', NULL::text, 'VineSpirit', 2, NULL::real, 14, 3, NULL::integer),
-    ('wave_3', 2, 'SpawnWave', NULL::text, 'LeafSlime', 4, NULL::real, 14, 5, NULL::integer),
-    ('outer_dead', 1, 'InstallObject', 'spring', 'PveWaterSlimeNest', NULL::integer, NULL::real, 14, 3, 1000),
-    ('outer_dead', 2, 'SpawnWave', NULL::text, 'WaterSlime', 6, NULL::real, 14, 7, NULL::integer)
+    ('wave_1', 1, 'SpawnWave', NULL::text, 'VineSpirit', 3, NULL::real, 14, 3, NULL::integer),
+    ('wave_2', 1, 'SpawnWave', NULL::text, 'VineSpirit', 3, NULL::real, 14, 7, NULL::integer),
+    ('wave_3', 1, 'SpawnWave', NULL::text, 'VineSpirit', 3, NULL::real, 14, 3, NULL::integer),
+    ('wave_3', 2, 'SpawnWave', NULL::text, 'LeafSlime', 6, NULL::real, 14, 5, NULL::integer),
+    ('outer_dead', 1, 'InstallObject', 'spring', 'PveWaterSlimeNest', NULL::integer, NULL::real, 14, 3, 1300),
+    ('outer_dead', 2, 'SpawnWave', NULL::text, 'WaterSlime', 9, NULL::real, 14, 7, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 6;
@@ -278,7 +278,7 @@ JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 6;
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('witch', 'PveVineWitch', 'RightPlayer', 14, 0, 5, 2500, 1, 7);
+    ('witch', 'PveVineWitch', 'RightPlayer', 14, 0, 5, 3250, 1, 7);
 
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
     ('witch', 1, 7);
@@ -308,17 +308,17 @@ INSERT INTO pve_scenario_event_actions
 SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
-    ('intro', 1, 'SetSpawner', 'witch', 'LeafSlime', 2, 8, NULL::integer, NULL::integer, NULL::integer),
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'SeedSpirit', 4, NULL::real, 14, 3, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'SeedSpirit', 4, NULL::real, 14, 7, NULL::integer),
-    ('phase_70', 1, 'SpawnWave', NULL::text, 'EvilEnt', 1, NULL::real, 14, 5, NULL::integer),
-    ('phase_40', 1, 'InstallObject', 'nest_a', 'PveNatureSlimeNest', NULL::integer, NULL::real, 14, 3, 500),
-    ('phase_40', 2, 'InstallObject', 'nest_b', 'PveWaterSlimeNest', NULL::integer, NULL::real, 14, 7, 500),
-    ('phase_40', 3, 'SetSpawner', 'witch', 'VineSpirit', 2, 10, NULL::integer, NULL::integer, NULL::integer),
+    ('intro', 1, 'SetSpawner', 'witch', 'LeafSlime', 3, 8, NULL::integer, NULL::integer, NULL::integer),
+    ('wave_1', 1, 'SpawnWave', NULL::text, 'SeedSpirit', 6, NULL::real, 14, 3, NULL::integer),
+    ('wave_2', 1, 'SpawnWave', NULL::text, 'SeedSpirit', 6, NULL::real, 14, 7, NULL::integer),
+    ('phase_70', 1, 'SpawnWave', NULL::text, 'EvilEnt', 2, NULL::real, 14, 5, NULL::integer),
+    ('phase_40', 1, 'InstallObject', 'nest_a', 'PveNatureSlimeNest', NULL::integer, NULL::real, 14, 3, 650),
+    ('phase_40', 2, 'InstallObject', 'nest_b', 'PveWaterSlimeNest', NULL::integer, NULL::real, 14, 7, 650),
+    ('phase_40', 3, 'SetSpawner', 'witch', 'VineSpirit', 3, 10, NULL::integer, NULL::integer, NULL::integer),
     ('phase_15', 1, 'SetSpawner', 'witch', NULL::text, 0, NULL::real, NULL::integer, NULL::integer, NULL::integer),
-    ('phase_15', 2, 'SpawnWave', NULL::text, 'TreeGolem', 1, NULL::real, 14, 3, NULL::integer),
-    ('phase_15', 3, 'SpawnWave', NULL::text, 'TreeGolem', 1, NULL::real, 14, 7, NULL::integer),
-    ('phase_15', 4, 'SpawnWave', NULL::text, 'LeafSlime', 6, NULL::real, 14, 5, NULL::integer)
+    ('phase_15', 2, 'SpawnWave', NULL::text, 'TreeGolem', 2, NULL::real, 14, 3, NULL::integer),
+    ('phase_15', 3, 'SpawnWave', NULL::text, 'TreeGolem', 2, NULL::real, 14, 7, NULL::integer),
+    ('phase_15', 4, 'SpawnWave', NULL::text, 'LeafSlime', 9, NULL::real, 14, 5, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 7;
@@ -327,7 +327,7 @@ JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 7;
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('gate_tower', 'GroundTower', 'RightPlayer', 14, 0, 5, 800, 1, 8);
+    ('gate_tower', 'GroundCannon', 'RightPlayer', 14, 0, 5, 1050, 1, 8);
 
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
     ('gate_tower', 1, 8);
@@ -354,11 +354,11 @@ INSERT INTO pve_scenario_event_actions
 SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'MiniRock', 2, NULL::real, 14, 3, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'RockSlime', 4, NULL::real, 14, 7, NULL::integer),
-    ('wave_3', 1, 'SpawnWave', NULL::text, 'MiniRock', 2, NULL::real, 14, 5, NULL::integer),
-    ('wave_3', 2, 'SpawnWave', NULL::text, 'RockSlime', 3, NULL::real, 14, 3, NULL::integer),
-    ('phase_50', 1, 'SpawnWave', NULL::text, 'MiniRock', 2, NULL::real, 14, 7, NULL::integer)
+    ('wave_1', 1, 'SpawnWave', NULL::text, 'MiniRock', 3, NULL::real, 14, 3, NULL::integer),
+    ('wave_2', 1, 'SpawnWave', NULL::text, 'RockSlime', 6, NULL::real, 14, 7, NULL::integer),
+    ('wave_3', 1, 'SpawnWave', NULL::text, 'MiniRock', 3, NULL::real, 14, 5, NULL::integer),
+    ('wave_3', 2, 'SpawnWave', NULL::text, 'RockSlime', 5, NULL::real, 14, 3, NULL::integer),
+    ('phase_50', 1, 'SpawnWave', NULL::text, 'MiniRock', 3, NULL::real, 14, 7, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 8;
@@ -367,8 +367,8 @@ JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 8;
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('tower_a', 'GroundTower', 'RightPlayer', 14, 0, 3, 600, 1, 9),
-    ('tower_b', 'GroundTower', 'RightPlayer', 14, 0, 7, 600, 2, 9);
+    ('tower_a', 'GroundCannon', 'RightPlayer', 14, 0, 3, 800, 1, 9),
+    ('tower_b', 'GroundCannon', 'RightPlayer', 14, 0, 7, 800, 2, 9);
 
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
     ('tower_a', 1, 9),
@@ -396,12 +396,12 @@ INSERT INTO pve_scenario_event_actions
 SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'RockMage', 1, NULL::real, 14, 5, NULL::integer),
-    ('wave_1', 2, 'SpawnWave', NULL::text, 'RockSlime', 3, NULL::real, 14, 5, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'MiniRock', 2, NULL::real, 14, 3, NULL::integer),
-    ('wave_3', 1, 'SpawnWave', NULL::text, 'RockMage', 1, NULL::real, 14, 7, NULL::integer),
-    ('tower_a_dead', 1, 'SpawnWave', NULL::text, 'RockMage', 1, NULL::real, 14, 7, NULL::integer),
-    ('tower_a_dead', 2, 'SpawnWave', NULL::text, 'RockSlime', 3, NULL::real, 14, 7, NULL::integer)
+    ('wave_1', 1, 'SpawnWave', NULL::text, 'RockMage', 2, NULL::real, 14, 5, NULL::integer),
+    ('wave_1', 2, 'SpawnWave', NULL::text, 'RockSlime', 5, NULL::real, 14, 5, NULL::integer),
+    ('wave_2', 1, 'SpawnWave', NULL::text, 'MiniRock', 3, NULL::real, 14, 3, NULL::integer),
+    ('wave_3', 1, 'SpawnWave', NULL::text, 'RockMage', 2, NULL::real, 14, 7, NULL::integer),
+    ('tower_a_dead', 1, 'SpawnWave', NULL::text, 'RockMage', 2, NULL::real, 14, 7, NULL::integer),
+    ('tower_a_dead', 2, 'SpawnWave', NULL::text, 'RockSlime', 5, NULL::real, 14, 7, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 9;
@@ -410,7 +410,7 @@ JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 9;
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('golem', 'WallGolem', 'RightPlayer', 14, 0, 5, 1800, 1, 10);
+    ('golem', 'WallGolem', 'RightPlayer', 14, 0, 5, 2350, 1, 10);
 
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
     ('golem', 1, 10);
@@ -438,12 +438,12 @@ INSERT INTO pve_scenario_event_actions
 SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'RockSlime', 4, NULL::real, 14, 3, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'RockSlime', 4, NULL::real, 14, 7, NULL::integer),
-    ('phase_60', 1, 'SpawnWave', NULL::text, 'MiniRock', 2, NULL::real, 14, 3, NULL::integer),
-    ('phase_60', 2, 'SpawnWave', NULL::text, 'MiniRock', 2, NULL::real, 14, 7, NULL::integer),
-    ('phase_30', 1, 'InstallObject', 'last_tower', 'GroundTower', NULL::integer, NULL::real, 14, 5, 400),
-    ('phase_30', 2, 'SpawnWave', NULL::text, 'RockMage', 1, NULL::real, 14, 3, NULL::integer)
+    ('wave_1', 1, 'SpawnWave', NULL::text, 'RockSlime', 6, NULL::real, 14, 3, NULL::integer),
+    ('wave_2', 1, 'SpawnWave', NULL::text, 'RockSlime', 6, NULL::real, 14, 7, NULL::integer),
+    ('phase_60', 1, 'SpawnWave', NULL::text, 'MiniRock', 3, NULL::real, 14, 3, NULL::integer),
+    ('phase_60', 2, 'SpawnWave', NULL::text, 'MiniRock', 3, NULL::real, 14, 7, NULL::integer),
+    ('phase_30', 1, 'InstallObject', 'last_tower', 'GroundCannon', NULL::integer, NULL::real, 14, 5, 500),
+    ('phase_30', 2, 'SpawnWave', NULL::text, 'RockMage', 2, NULL::real, 14, 3, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 10;
@@ -452,7 +452,7 @@ JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 10;
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('keep_gate', 'GroundTower', 'RightPlayer', 14, 0, 5, 3000, 1, 11);
+    ('keep_gate', 'GroundCannon', 'RightPlayer', 14, 0, 5, 3000, 1, 11);
 
 INSERT INTO pve_scenario_rules (scenario_id, win_condition, survive_seconds) VALUES (11, 'Survive', 100);
 
@@ -483,13 +483,13 @@ INSERT INTO pve_scenario_event_actions
 SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'EmberSpirit', 5, NULL::real, 14, 5, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'FireChildSpirit', 2, NULL::real, 14, 3, NULL::integer),
-    ('wave_3', 1, 'SpawnWave', NULL::text, 'FireSpirit', 1, NULL::real, 14, 7, NULL::integer),
-    ('wave_4', 1, 'SpawnWave', NULL::text, 'EmberSpirit', 5, NULL::real, 14, 3, NULL::integer),
-    ('wave_4', 2, 'SpawnWave', NULL::text, 'FireChildSpirit', 2, NULL::real, 14, 7, NULL::integer),
-    ('wave_5', 1, 'SpawnWave', NULL::text, 'FireSpirit', 1, NULL::real, 14, 5, NULL::integer),
-    ('wave_6', 1, 'SpawnWave', NULL::text, 'EmberSpirit', 6, NULL::real, 14, 7, NULL::integer)
+    ('wave_1', 1, 'SpawnWave', NULL::text, 'EmberSpirit', 8, NULL::real, 14, 5, NULL::integer),
+    ('wave_2', 1, 'SpawnWave', NULL::text, 'FireChildSpirit', 3, NULL::real, 14, 3, NULL::integer),
+    ('wave_3', 1, 'SpawnWave', NULL::text, 'FireSpirit', 2, NULL::real, 14, 7, NULL::integer),
+    ('wave_4', 1, 'SpawnWave', NULL::text, 'EmberSpirit', 8, NULL::real, 14, 3, NULL::integer),
+    ('wave_4', 2, 'SpawnWave', NULL::text, 'FireChildSpirit', 3, NULL::real, 14, 7, NULL::integer),
+    ('wave_5', 1, 'SpawnWave', NULL::text, 'FireSpirit', 2, NULL::real, 14, 5, NULL::integer),
+    ('wave_6', 1, 'SpawnWave', NULL::text, 'EmberSpirit', 9, NULL::real, 14, 7, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 11;
@@ -498,8 +498,8 @@ JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 11;
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('root_a', 'PveVineColony', 'RightPlayer', 14, 0, 3, 800, 1, 12),
-    ('root_b', 'PveVineColony', 'RightPlayer', 14, 0, 7, 800, 2, 12);
+    ('root_a', 'PveVineColony', 'RightPlayer', 14, 0, 3, 1050, 1, 12),
+    ('root_b', 'PveVineColony', 'RightPlayer', 14, 0, 7, 1050, 2, 12);
 
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
     ('root_a', 1, 12),
@@ -531,13 +531,13 @@ SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.cou
 FROM (VALUES
     ('intro', 1, 'SetSpawner', 'root_a', NULL::text, 0, NULL::real, NULL::integer, NULL::integer, NULL::integer),
     ('intro', 2, 'SetSpawner', 'root_b', NULL::text, 0, NULL::real, NULL::integer, NULL::integer, NULL::integer),
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'VineSpirit', 2, NULL::real, 14, 5, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'FireChildSpirit', 3, NULL::real, 14, 3, NULL::integer),
-    ('wave_3', 1, 'SpawnWave', NULL::text, 'VineSpirit', 2, NULL::real, 14, 7, NULL::integer),
-    ('wave_3', 2, 'SpawnWave', NULL::text, 'EmberSpirit', 3, NULL::real, 14, 5, NULL::integer),
-    ('root_a_dead', 1, 'InstallObject', 'heart', 'PveWaterSlimeNest', NULL::integer, NULL::real, 14, 5, 1200),
-    ('root_a_dead', 2, 'SpawnWave', NULL::text, 'WaterSlime', 4, NULL::real, 14, 5, NULL::integer),
-    ('root_b_dead', 1, 'SpawnWave', NULL::text, 'FireSpirit', 1, NULL::real, 14, 5, NULL::integer)
+    ('wave_1', 1, 'SpawnWave', NULL::text, 'VineSpirit', 3, NULL::real, 14, 5, NULL::integer),
+    ('wave_2', 1, 'SpawnWave', NULL::text, 'FireChildSpirit', 5, NULL::real, 14, 3, NULL::integer),
+    ('wave_3', 1, 'SpawnWave', NULL::text, 'VineSpirit', 3, NULL::real, 14, 7, NULL::integer),
+    ('wave_3', 2, 'SpawnWave', NULL::text, 'EmberSpirit', 5, NULL::real, 14, 5, NULL::integer),
+    ('root_a_dead', 1, 'InstallObject', 'heart', 'PveWaterSlimeNest', NULL::integer, NULL::real, 14, 5, 1550),
+    ('root_a_dead', 2, 'SpawnWave', NULL::text, 'WaterSlime', 6, NULL::real, 14, 5, NULL::integer),
+    ('root_b_dead', 1, 'SpawnWave', NULL::text, 'FireSpirit', 2, NULL::real, 14, 5, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 12;
@@ -546,9 +546,9 @@ JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 12;
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('witch', 'PveVineWitch', 'RightPlayer', 14, 0, 5, 2500, 1, 13),
-    ('guard_a', 'GroundTower', 'RightPlayer', 14, 0, 3, 500, 2, 13),
-    ('guard_b', 'GroundTower', 'RightPlayer', 14, 0, 7, 500, 3, 13);
+    ('witch', 'PveVineWitch', 'RightPlayer', 14, 0, 5, 3250, 1, 13),
+    ('guard_a', 'GroundCannon', 'RightPlayer', 14, 0, 3, 650, 2, 13),
+    ('guard_b', 'GroundCannon', 'RightPlayer', 14, 0, 7, 650, 3, 13);
 
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
     ('witch', 1, 13);
@@ -578,17 +578,17 @@ INSERT INTO pve_scenario_event_actions
 SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
-    ('intro', 1, 'SetSpawner', 'witch', 'EmberSpirit', 3, 10, NULL::integer, NULL::integer, NULL::integer),
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'MiniRock', 2, NULL::real, 14, 3, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'MiniRock', 2, NULL::real, 14, 7, NULL::integer),
-    ('phase_70', 1, 'SpawnWave', NULL::text, 'FireSpirit', 1, NULL::real, 14, 3, NULL::integer),
-    ('phase_70', 2, 'SetSpawner', 'witch', 'MiniRock', 2, 12, NULL::integer, NULL::integer, NULL::integer),
-    ('phase_40', 1, 'InstallObject', 'guard_c', 'GroundTower', NULL::integer, NULL::real, 14, 5, 500),
-    ('phase_40', 2, 'SpawnWave', NULL::text, 'RockMage', 1, NULL::real, 14, 7, NULL::integer),
+    ('intro', 1, 'SetSpawner', 'witch', 'EmberSpirit', 5, 10, NULL::integer, NULL::integer, NULL::integer),
+    ('wave_1', 1, 'SpawnWave', NULL::text, 'MiniRock', 3, NULL::real, 14, 3, NULL::integer),
+    ('wave_2', 1, 'SpawnWave', NULL::text, 'MiniRock', 3, NULL::real, 14, 7, NULL::integer),
+    ('phase_70', 1, 'SpawnWave', NULL::text, 'FireSpirit', 2, NULL::real, 14, 3, NULL::integer),
+    ('phase_70', 2, 'SetSpawner', 'witch', 'MiniRock', 3, 12, NULL::integer, NULL::integer, NULL::integer),
+    ('phase_40', 1, 'InstallObject', 'guard_c', 'GroundCannon', NULL::integer, NULL::real, 14, 5, 650),
+    ('phase_40', 2, 'SpawnWave', NULL::text, 'RockMage', 2, NULL::real, 14, 7, NULL::integer),
     ('phase_15', 1, 'SetSpawner', 'witch', NULL::text, 0, NULL::real, NULL::integer, NULL::integer, NULL::integer),
-    ('phase_15', 2, 'SpawnWave', NULL::text, 'FireSpirit', 1, NULL::real, 14, 3, NULL::integer),
-    ('phase_15', 3, 'SpawnWave', NULL::text, 'FireSpirit', 1, NULL::real, 14, 7, NULL::integer),
-    ('phase_15', 4, 'SpawnWave', NULL::text, 'EmberSpirit', 5, NULL::real, 14, 5, NULL::integer)
+    ('phase_15', 2, 'SpawnWave', NULL::text, 'FireSpirit', 2, NULL::real, 14, 3, NULL::integer),
+    ('phase_15', 3, 'SpawnWave', NULL::text, 'FireSpirit', 2, NULL::real, 14, 7, NULL::integer),
+    ('phase_15', 4, 'SpawnWave', NULL::text, 'EmberSpirit', 8, NULL::real, 14, 5, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 13;
