@@ -1,7 +1,9 @@
 -- V013: reworks the forest adventure's scenarios 1-4 with the V012 PVE engine (per-installer
 -- hp override, hp/death triggers, SpawnWave/InstallObject/SetSpawner actions, Survive win
--- condition), adds forest stage 2 (scenarios 5-7), and adds the fortress adventure (id 2,
--- FREE, stage 3-4, scenarios 8-13). Design table: issue #48.
+-- condition) and adds the fortress adventure (id 2, FREE, stage 3-4, scenarios 8-13). The
+-- forest adventure stays one stage that ends at the vine witch (scenario 4); the witch flees to
+-- the fortress and is its final boss. Stage id 2 and scenario ids 5-7 are left unused.
+-- Design table: issue #48.
 -- no-tags: no game_objects or magics row is registered here.
 
 -- 1. Delete the forest scenario 1-4 CONTENT rows only. adventures(1), stages(1) and
@@ -12,15 +14,12 @@ DELETE FROM pve_scenario_objectives WHERE scenario_id IN (1, 2, 3, 4);
 DELETE FROM pve_scenario_rules WHERE scenario_id IN (1, 2, 3, 4);
 DELETE FROM pve_scenario_installers WHERE scenario_id IN (1, 2, 3, 4);
 
--- 2. Forest stage 2 and the fortress adventure's stages/scenarios. Ids are explicit and
--- picked above the current maximum of each table.
-INSERT INTO stages (id, adventure_id) VALUES (2, 1);
-
+-- 2. The fortress adventure's stages/scenarios. Ids are explicit and picked above the
+-- current maximum of each table.
 INSERT INTO adventures (id, name, access_type) VALUES (2, 'fortress', 'FREE');
 INSERT INTO stages (id, adventure_id) VALUES (3, 2), (4, 2);
 
 INSERT INTO scenarios (id, stage_id) VALUES
-    (5, 2), (6, 2), (7, 2),
     (8, 3), (9, 3), (10, 3),
     (11, 4), (12, 4), (13, 4);
 
@@ -188,140 +187,6 @@ FROM (VALUES
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 4;
-
--- ---- scenario 5 (stage 2) ----
-INSERT INTO pve_scenario_installers
-    (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
-VALUES
-    ('seed_nest', 'PveNatureSlimeNest', 'RightPlayer', 14, 0, 5, 1300, 1, 5);
-
-INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
-    ('seed_nest', 1, 5);
-
-INSERT INTO pve_scenario_events
-    (event_id, trigger_type, trigger_value, target_installer_id, speaker_installer_id, message_key, sort_order, scenario_id)
-VALUES
-    ('intro', 'SecondsGte', 1, NULL::text, NULL::text, 'pve_5_intro', 1, 5),
-    ('wave_1', 'SecondsGte', 30, NULL::text, NULL::text, NULL::text, 2, 5),
-    ('wave_2', 'SecondsGte', 60, NULL::text, NULL::text, NULL::text, 3, 5),
-    ('wave_3', 'SecondsGte', 90, NULL::text, NULL::text, NULL::text, 4, 5),
-    ('phase_50', 'InstallerHpPercentLte', 50, 'seed_nest', 'seed_nest', 'pve_5_phase_50', 5, 5);
-
-INSERT INTO pve_scenario_event_lines (event_row_id, line_order, line_text)
-SELECT e.id, 1, v.line_text
-FROM (VALUES
-    ('intro', 'Something heavy is walking this way...'),
-    ('phase_50', 'Guardians, protect the nest!')
-) AS v(event_id, line_text)
-JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 5;
-
-INSERT INTO pve_scenario_event_actions
-    (event_row_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds, position_x, position_z, max_hp)
-SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
-       v.position_x, v.position_z, v.max_hp
-FROM (VALUES
-    ('intro', 1, 'SetSpawner', 'seed_nest', 'SeedSpirit', 5, 12, NULL::integer, NULL::integer, NULL::integer),
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'TreeGolem', 2, NULL::real, 14, 3, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'TreeGolem', 2, NULL::real, 14, 7, NULL::integer),
-    ('wave_2', 2, 'SpawnWave', NULL::text, 'LeafSlime', 6, NULL::real, 14, 5, NULL::integer),
-    ('wave_3', 1, 'SpawnWave', NULL::text, 'SeedSpirit', 6, NULL::real, 14, 3, NULL::integer),
-    ('phase_50', 1, 'SpawnWave', NULL::text, 'TreeGolem', 2, NULL::real, 14, 3, NULL::integer),
-    ('phase_50', 2, 'SpawnWave', NULL::text, 'TreeGolem', 2, NULL::real, 14, 7, NULL::integer)
-) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
-       position_x, position_z, max_hp)
-JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 5;
-
--- ---- scenario 6 (stage 2) ----
-INSERT INTO pve_scenario_installers
-    (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
-VALUES
-    ('outer', 'PveVineColony', 'RightPlayer', 14, 0, 5, 800, 1, 6);
-
-INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
-    ('outer', 1, 6),
-    ('spring', 2, 6);
-
-INSERT INTO pve_scenario_events
-    (event_id, trigger_type, trigger_value, target_installer_id, speaker_installer_id, message_key, sort_order, scenario_id)
-VALUES
-    ('intro', 'SecondsGte', 1, NULL::text, NULL::text, 'pve_6_intro', 1, 6),
-    ('wave_1', 'SecondsGte', 15, NULL::text, NULL::text, NULL::text, 2, 6),
-    ('wave_2', 'SecondsGte', 40, NULL::text, NULL::text, NULL::text, 3, 6),
-    ('wave_3', 'SecondsGte', 65, NULL::text, NULL::text, NULL::text, 4, 6),
-    ('outer_dead', 'InstallerDestroyed', 0, 'outer', NULL::text, 'pve_6_outer_dead', 5, 6);
-
-INSERT INTO pve_scenario_event_lines (event_row_id, line_order, line_text)
-SELECT e.id, 1, v.line_text
-FROM (VALUES
-    ('intro', 'Cut the roots and the spring will show itself.'),
-    ('outer_dead', 'The spring awakens!')
-) AS v(event_id, line_text)
-JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 6;
-
-INSERT INTO pve_scenario_event_actions
-    (event_row_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds, position_x, position_z, max_hp)
-SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
-       v.position_x, v.position_z, v.max_hp
-FROM (VALUES
-    ('intro', 1, 'SetSpawner', 'outer', NULL::text, 0, NULL::real, NULL::integer, NULL::integer, NULL::integer),
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'VineSpirit', 3, NULL::real, 14, 3, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'VineSpirit', 3, NULL::real, 14, 7, NULL::integer),
-    ('wave_3', 1, 'SpawnWave', NULL::text, 'VineSpirit', 3, NULL::real, 14, 3, NULL::integer),
-    ('wave_3', 2, 'SpawnWave', NULL::text, 'LeafSlime', 6, NULL::real, 14, 5, NULL::integer),
-    ('outer_dead', 1, 'InstallObject', 'spring', 'PveWaterSlimeNest', NULL::integer, NULL::real, 14, 3, 1300),
-    ('outer_dead', 2, 'SpawnWave', NULL::text, 'WaterSlime', 9, NULL::real, 14, 7, NULL::integer)
-) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
-       position_x, position_z, max_hp)
-JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 6;
-
--- ---- scenario 7 (stage 2) ----
-INSERT INTO pve_scenario_installers
-    (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
-VALUES
-    ('witch', 'PveVineWitch', 'RightPlayer', 14, 0, 5, 3250, 1, 7);
-
-INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
-    ('witch', 1, 7);
-
-INSERT INTO pve_scenario_events
-    (event_id, trigger_type, trigger_value, target_installer_id, speaker_installer_id, message_key, sort_order, scenario_id)
-VALUES
-    ('intro', 'SecondsGte', 1, NULL::text, 'witch', 'pve_7_intro', 1, 7),
-    ('wave_1', 'SecondsGte', 30, NULL::text, NULL::text, NULL::text, 2, 7),
-    ('wave_2', 'SecondsGte', 60, NULL::text, NULL::text, NULL::text, 3, 7),
-    ('phase_70', 'InstallerHpPercentLte', 70, 'witch', 'witch', 'pve_7_phase_70', 4, 7),
-    ('phase_40', 'InstallerHpPercentLte', 40, 'witch', 'witch', 'pve_7_phase_40', 5, 7),
-    ('phase_15', 'InstallerHpPercentLte', 15, 'witch', 'witch', 'pve_7_phase_15', 6, 7);
-
-INSERT INTO pve_scenario_event_lines (event_row_id, line_order, line_text)
-SELECT e.id, 1, v.line_text
-FROM (VALUES
-    ('intro', 'So you are the one burning my forest.'),
-    ('phase_70', 'Wake, old one!'),
-    ('phase_40', 'My nests, rise!'),
-    ('phase_15', 'This forest is MINE!')
-) AS v(event_id, line_text)
-JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 7;
-
-INSERT INTO pve_scenario_event_actions
-    (event_row_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds, position_x, position_z, max_hp)
-SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
-       v.position_x, v.position_z, v.max_hp
-FROM (VALUES
-    ('intro', 1, 'SetSpawner', 'witch', 'LeafSlime', 3, 8, NULL::integer, NULL::integer, NULL::integer),
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'SeedSpirit', 6, NULL::real, 14, 3, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'SeedSpirit', 6, NULL::real, 14, 7, NULL::integer),
-    ('phase_70', 1, 'SpawnWave', NULL::text, 'EvilEnt', 2, NULL::real, 14, 5, NULL::integer),
-    ('phase_40', 1, 'InstallObject', 'nest_a', 'PveNatureSlimeNest', NULL::integer, NULL::real, 14, 3, 650),
-    ('phase_40', 2, 'InstallObject', 'nest_b', 'PveWaterSlimeNest', NULL::integer, NULL::real, 14, 7, 650),
-    ('phase_40', 3, 'SetSpawner', 'witch', 'VineSpirit', 3, 10, NULL::integer, NULL::integer, NULL::integer),
-    ('phase_15', 1, 'SetSpawner', 'witch', NULL::text, 0, NULL::real, NULL::integer, NULL::integer, NULL::integer),
-    ('phase_15', 2, 'SpawnWave', NULL::text, 'TreeGolem', 2, NULL::real, 14, 3, NULL::integer),
-    ('phase_15', 3, 'SpawnWave', NULL::text, 'TreeGolem', 2, NULL::real, 14, 7, NULL::integer),
-    ('phase_15', 4, 'SpawnWave', NULL::text, 'LeafSlime', 9, NULL::real, 14, 5, NULL::integer)
-) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
-       position_x, position_z, max_hp)
-JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 7;
 
 -- ---- scenario 8 (stage 3) ----
 INSERT INTO pve_scenario_installers
@@ -594,20 +459,18 @@ FROM (VALUES
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 13;
 
 -- 3. Rewards: one stage_clear_pc quest per new stage. require_value is the global count of
--- cleared stages once this migration lands (existing stage 1, plus stages 2, 3, 4).
--- Magic ids chosen against the test-env clone: none of 16 (life_tree, Nature), 83
--- (boulder_strike, Rock), 44 (meteor_shower, Fire) appear in reward_params, and none names a
+-- cleared stages once this migration lands (existing stage 1, plus stages 3 and 4).
+-- Magic ids chosen against the test-env clone: neither 83 (boulder_strike, Rock) nor 44
+-- (meteor_shower, Fire) appears in reward_params, and neither names a
 -- prefab used as an enemy in this migration (unlike tree_golem/vine_spirit/vine_colony,
 -- already spent on quests 5-8, or rock_mage/mini_rock/ember_spirit, which are fortress enemies).
 INSERT INTO quests (id, progress_checker, require_value, reward_giver, access_type) VALUES
     (9, 'stage_clear_pc', 2, 'magic_rg', 'DEFAULT'),
-    (10, 'stage_clear_pc', 3, 'magic_rg', 'DEFAULT'),
-    (11, 'stage_clear_pc', 4, 'magic_rg', 'DEFAULT');
+    (10, 'stage_clear_pc', 3, 'magic_rg', 'DEFAULT');
 
 INSERT INTO reward_params (quest_id, name, value) VALUES
-    (9, 'magic_id', 16),
-    (10, 'magic_id', 83),
-    (11, 'magic_id', 44);
+    (9, 'magic_id', 83),
+    (10, 'magic_id', 44);
 
 -- 4. Sequences for every table this migration inserted into.
 SELECT setval('adventures_id_seq', (SELECT max(id) FROM adventures));
