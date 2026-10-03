@@ -23,10 +23,11 @@
 --      - 이미 이 quest 들을 완료하고 보상을 받은 플레이어는 받은 것을 그대로 갖는다.
 --      - stage 를 클리어했지만 옛 보상을 아직 받지 못한 플레이어는 같은 마법을 이제 상자에서 받는다.
 --
--- 배포 순서: claim_mode 'MANUAL' 과 상자 받기 endpoint 를 이해하는 lobby 를 이 migration 보다
--- 먼저 배포한다. 이 migration 전의 lobby 는 컬럼을 모르고, 이 migration 후에는 자동 검사가
--- MANUAL quest 를 건너뛰므로 옛 lobby 는 상자를 조용히 영영 지급하지 않는다. V019~V022 가 먼저
--- 적용되어 있어야 한다.
+-- 배포 순서: 이 migration 을 새 lobby 보다 먼저 적용한다. 새 lobby 는 시작할 때 quests.claim_mode
+-- 와 이 chain 의 표들을 읽으므로 이 컬럼이 없으면 뜨지 않는다. 적용한 뒤에도 옛 lobby 는 컬럼을
+-- 모르지만, 모험 클리어 quest 는 progress_checker 가 NULL 이라 옛 lobby 가 건너뛰므로 깨지지
+-- 않는다. 상자는 claim endpoint 를 가진 새 lobby 와 클릭 흐름을 가진 새 client 가 배포된 뒤에야
+-- 받을 수 있다. V019~V022 가 먼저 적용되어 있어야 한다.
 -- no-tags: this migration registers neither a game object nor a magic.
 
 -- 1. claim_mode.

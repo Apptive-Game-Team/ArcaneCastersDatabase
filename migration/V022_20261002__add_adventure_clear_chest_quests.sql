@@ -14,9 +14,10 @@
 -- 모험은 id 가 아니라 name 으로, 상자는 chests.key 로 찾는다. quests.id 는 sequence 로 받는다.
 -- 이미 같은 (condition_type, condition_target_id) quest 가 있으면 quest 도 보상도 다시 넣지 않는다.
 --
--- 배포 순서: ADVENTURE_CLEAR 조건과 CHEST 보상은 lobby application 이 구현한다. lobby 는
--- 시작할 때 DEPRECATED 가 아닌 quest 의 조건이나 보상 type 을 모르면 즉시 실패하므로, 두 type 을
--- 등록한 lobby 를 먼저 배포한 환경에서만 이 migration 을 적용한다. V021(chests 표와 상자 두 개)이
+-- 배포 순서: ADVENTURE_CLEAR 조건과 CHEST 보상은 lobby application 이 구현한다. 새 lobby 는
+-- 시작할 때 DEPRECATED 가 아닌 quest 의 type 을 모르면 즉시 실패하지만 이 두 type 을 모두 등록하고
+-- 있으므로, 이 migration 은 새 lobby 보다 먼저 적용해도 된다. 옛 lobby 는 progress_checker 가
+-- NULL 인 quest 를 건너뛰므로 이 quest 가 있어도 깨지지 않는다. V021(chests 표와 상자 두 개)이
 -- 먼저 적용되어 있어야 한다.
 -- no-tags: this migration registers neither a game object nor a magic.
 
