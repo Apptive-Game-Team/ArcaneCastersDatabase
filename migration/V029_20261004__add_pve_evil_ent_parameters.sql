@@ -8,9 +8,15 @@
 -- projectile_speed, pull_mass_limit, quantity, range). magic_id and mana_cost are not copied:
 -- the boss is not a card (evil_ent has no magic_id row, and mana_cost is skipped by name).
 -- prefab_elements are the same two as evil_ent (Fire, Nature).
--- The copied attack numbers are the PVP values (damage 90, sub_damage 400) and are first guesses
--- to be tuned by playing. The key list was NOT matched against the game server's
--- PveEvilEntPrefabInitializer when this was written; compare before deploying.
+-- Overridden against the card values, because the boss stands still at x=14 and the left player
+-- stands at x=1 (arena x 0..18): attack_range and sub_attack_range are 20, not the card's 5 and 6.
+-- With the card ranges the game server's PveEvilEntMob never reaches the player and the boss stands
+-- idle (verified by a unit test in game pull request #78). damage 40 (card 90) and sub_damage 200
+-- (card 400) are first guesses, lowered because the boss now hits from across the arena; tune by
+-- playing.
+-- The key list matches what PveEvilEntPrefabInitializer reads (game pull request #78): hp, mass,
+-- radius, damage, attack_interval, attack_range, projectile_speed, sub_damage, sub_attack_range,
+-- sub_attack_interval, pull_mass_limit. Other copied keys are not read and are harmless.
 -- Deploy order: this must apply after V028 and before a game server that spawns PveEvilEnt.
 -- Idempotent: game_objects and parameter_values use ON CONFLICT and a second run resets the values.
 -- no-tags: the boss is enemy-only and never enters a bot deck, so counter tags do not apply.
@@ -25,12 +31,22 @@ WITH copied AS (
     JOIN parameter_values pv ON pv.game_object_id = src.id
     JOIN parameters p ON p.id = pv.parameter_id
     WHERE src.name = 'evil_ent'
-      AND p.name NOT IN ('magic_id', 'mana_cost', 'hp')
+      AND p.name NOT IN ('magic_id', 'mana_cost', 'hp',
+                         'attack_range', 'sub_attack_range', 'damage', 'sub_damage')
+),
+overridden AS (
+    SELECT p.id AS parameter_id, v.value
+    FROM (VALUES ('hp', 3000.0),
+                 ('attack_range', 20.0),
+                 ('sub_attack_range', 20.0),
+                 ('damage', 40.0),
+                 ('sub_damage', 200.0)) AS v(name, value)
+    JOIN parameters p ON p.name = v.name
 ),
 merged AS (
     SELECT parameter_id, value FROM copied
     UNION ALL
-    SELECT p.id, 3000.0 FROM parameters p WHERE p.name = 'hp'
+    SELECT parameter_id, value FROM overridden
 )
 INSERT INTO parameter_values(game_object_id, parameter_id, value)
 SELECT go.id, m.parameter_id, m.value
