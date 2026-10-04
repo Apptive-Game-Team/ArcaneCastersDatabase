@@ -1,9 +1,11 @@
 -- V027: adds the gate adventure (id 3, FREE) with its first stage (id 5) and three scenarios
 -- (ids 14-16). Ids are explicit and picked above the current maximum of each table
 -- (adventures 2, stages 4, scenarios 13). Fire-realm beings forced the toad species to open
--- dimensional gates; the player destroys the gates. Enemies use only DimensionToad (the gate
--- keeper: keeps its distance, never attacks, spawns FireTadpole and LightningTadpole in turn
--- through the scenario's own events), FireTadpole and LightningTadpole.
+-- dimensional gates; the player destroys the gates. Enemies use only the PVE-only prefabs
+-- PveDimensionToad (the stationary gate keeper: never attacks, spawns PveFireTadpole and
+-- PveLightningTadpole in turn through the scenario's own events), PveFireTadpole and
+-- PveLightningTadpole. Their parameters are registered in V028.
+-- All numbers here (wave sizes, gate max_hp 600-1200) are first guesses to be tuned by playing.
 -- Scenario 14: one gate. Scenario 15: two gates, the second opens at 15 s, each bursts into a
 -- wave when destroyed. Scenario 16: Survive 100 s while more gates keep opening.
 -- No end-of-adventure chest, reward or quest rows: those come with stage 2.
@@ -31,7 +33,7 @@ DELETE FROM pve_scenario_installers WHERE scenario_id IN (14, 15, 16);
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('gate_a', 'DimensionToad', 'RightPlayer', 14, 0, 5, NULL, 1, 14);
+    ('gate_a', 'PveDimensionToad', 'RightPlayer', 14, 0, 5, 800, 1, 14);
 
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
     ('gate_a', 1, 14);
@@ -58,10 +60,10 @@ INSERT INTO pve_scenario_event_actions
 SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
-    ('wave_1', 1, 'SpawnWave', NULL::text, 'FireTadpole', 4, NULL::real, 14, 3, NULL::integer),
-    ('wave_1', 2, 'SpawnWave', NULL::text, 'LightningTadpole', 4, NULL::real, 14, 7, NULL::integer),
-    ('wave_2', 1, 'SpawnWave', NULL::text, 'FireTadpole', 6, NULL::real, 14, 3, NULL::integer),
-    ('wave_2', 2, 'SpawnWave', NULL::text, 'LightningTadpole', 6, NULL::real, 14, 7, NULL::integer)
+    ('wave_1', 1, 'SpawnWave', NULL::text, 'PveFireTadpole', 2, NULL::real, 14, 3, NULL::integer),
+    ('wave_1', 2, 'SpawnWave', NULL::text, 'PveLightningTadpole', 2, NULL::real, 14, 7, NULL::integer),
+    ('wave_2', 1, 'SpawnWave', NULL::text, 'PveFireTadpole', 3, NULL::real, 14, 3, NULL::integer),
+    ('wave_2', 2, 'SpawnWave', NULL::text, 'PveLightningTadpole', 3, NULL::real, 14, 7, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 14;
@@ -70,7 +72,7 @@ JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 14;
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('gate_a', 'DimensionToad', 'RightPlayer', 14, 0, 3, NULL, 1, 15);
+    ('gate_a', 'PveDimensionToad', 'RightPlayer', 14, 0, 3, 600, 1, 15);
 
 -- gate_b is installed by the gate_b_open event; an objective installed later counts once it exists.
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
@@ -101,11 +103,11 @@ INSERT INTO pve_scenario_event_actions
 SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
-    ('gate_b_open', 1, 'InstallObject', 'gate_b', 'DimensionToad', NULL::integer, NULL::real, 14, 7, NULL::integer),
-    ('gate_a_dead', 1, 'SpawnWave', NULL::text, 'FireTadpole', 5, NULL::real, 14, 5, NULL::integer),
-    ('gate_a_dead', 2, 'SpawnWave', NULL::text, 'LightningTadpole', 5, NULL::real, 14, 5, NULL::integer),
-    ('gate_b_dead', 1, 'SpawnWave', NULL::text, 'FireTadpole', 5, NULL::real, 14, 5, NULL::integer),
-    ('gate_b_dead', 2, 'SpawnWave', NULL::text, 'LightningTadpole', 5, NULL::real, 14, 5, NULL::integer)
+    ('gate_b_open', 1, 'InstallObject', 'gate_b', 'PveDimensionToad', NULL::integer, NULL::real, 14, 7, 600),
+    ('gate_a_dead', 1, 'SpawnWave', NULL::text, 'PveFireTadpole', 3, NULL::real, 14, 5, NULL::integer),
+    ('gate_a_dead', 2, 'SpawnWave', NULL::text, 'PveLightningTadpole', 3, NULL::real, 14, 5, NULL::integer),
+    ('gate_b_dead', 1, 'SpawnWave', NULL::text, 'PveFireTadpole', 3, NULL::real, 14, 5, NULL::integer),
+    ('gate_b_dead', 2, 'SpawnWave', NULL::text, 'PveLightningTadpole', 3, NULL::real, 14, 5, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 15;
@@ -116,7 +118,7 @@ JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 15;
 INSERT INTO pve_scenario_installers
     (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
 VALUES
-    ('gate_1', 'DimensionToad', 'RightPlayer', 14, 0, 5, NULL, 1, 16);
+    ('gate_1', 'PveDimensionToad', 'RightPlayer', 14, 0, 5, 1200, 1, 16);
 
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
     ('gate_1', 1, 16);
@@ -152,18 +154,18 @@ INSERT INTO pve_scenario_event_actions
 SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
        v.position_x, v.position_z, v.max_hp
 FROM (VALUES
-    ('gate_2_open', 1, 'InstallObject', 'gate_2', 'DimensionToad', NULL::integer, NULL::real, 14, 3, NULL::integer),
-    ('gate_3_open', 1, 'InstallObject', 'gate_3', 'DimensionToad', NULL::integer, NULL::real, 14, 7, NULL::integer),
-    ('gate_4_open', 1, 'InstallObject', 'gate_4', 'DimensionToad', NULL::integer, NULL::real, 14, 4, NULL::integer),
-    ('gate_5_open', 1, 'InstallObject', 'gate_5', 'DimensionToad', NULL::integer, NULL::real, 14, 6, NULL::integer),
-    ('gate_2_dead', 1, 'SpawnWave', NULL::text, 'FireTadpole', 4, NULL::real, 14, 5, NULL::integer),
-    ('gate_2_dead', 2, 'SpawnWave', NULL::text, 'LightningTadpole', 4, NULL::real, 14, 5, NULL::integer),
-    ('gate_3_dead', 1, 'SpawnWave', NULL::text, 'FireTadpole', 4, NULL::real, 14, 5, NULL::integer),
-    ('gate_3_dead', 2, 'SpawnWave', NULL::text, 'LightningTadpole', 4, NULL::real, 14, 5, NULL::integer),
-    ('gate_4_dead', 1, 'SpawnWave', NULL::text, 'FireTadpole', 4, NULL::real, 14, 5, NULL::integer),
-    ('gate_4_dead', 2, 'SpawnWave', NULL::text, 'LightningTadpole', 4, NULL::real, 14, 5, NULL::integer),
-    ('gate_5_dead', 1, 'SpawnWave', NULL::text, 'FireTadpole', 4, NULL::real, 14, 5, NULL::integer),
-    ('gate_5_dead', 2, 'SpawnWave', NULL::text, 'LightningTadpole', 4, NULL::real, 14, 5, NULL::integer)
+    ('gate_2_open', 1, 'InstallObject', 'gate_2', 'PveDimensionToad', NULL::integer, NULL::real, 14, 3, 600),
+    ('gate_3_open', 1, 'InstallObject', 'gate_3', 'PveDimensionToad', NULL::integer, NULL::real, 14, 7, 600),
+    ('gate_4_open', 1, 'InstallObject', 'gate_4', 'PveDimensionToad', NULL::integer, NULL::real, 14, 4, 600),
+    ('gate_5_open', 1, 'InstallObject', 'gate_5', 'PveDimensionToad', NULL::integer, NULL::real, 14, 6, 600),
+    ('gate_2_dead', 1, 'SpawnWave', NULL::text, 'PveFireTadpole', 2, NULL::real, 14, 5, NULL::integer),
+    ('gate_2_dead', 2, 'SpawnWave', NULL::text, 'PveLightningTadpole', 2, NULL::real, 14, 5, NULL::integer),
+    ('gate_3_dead', 1, 'SpawnWave', NULL::text, 'PveFireTadpole', 2, NULL::real, 14, 5, NULL::integer),
+    ('gate_3_dead', 2, 'SpawnWave', NULL::text, 'PveLightningTadpole', 2, NULL::real, 14, 5, NULL::integer),
+    ('gate_4_dead', 1, 'SpawnWave', NULL::text, 'PveFireTadpole', 2, NULL::real, 14, 5, NULL::integer),
+    ('gate_4_dead', 2, 'SpawnWave', NULL::text, 'PveLightningTadpole', 2, NULL::real, 14, 5, NULL::integer),
+    ('gate_5_dead', 1, 'SpawnWave', NULL::text, 'PveFireTadpole', 2, NULL::real, 14, 5, NULL::integer),
+    ('gate_5_dead', 2, 'SpawnWave', NULL::text, 'PveLightningTadpole', 2, NULL::real, 14, 5, NULL::integer)
 ) AS v(event_id, action_order, action_type, installer_id, prefab_type, count, interval_seconds,
        position_x, position_z, max_hp)
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 16;
