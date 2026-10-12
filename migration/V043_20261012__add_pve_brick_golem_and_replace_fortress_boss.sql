@@ -14,11 +14,11 @@
 --   hp                   3250             pve_evil_ent 3000; scenario 13 overrides it per installer
 --   radius               1.6              pve_evil_ent 1.2, wall_golem 1.2; larger body than both
 --   mass                 1000000          pve_vine_witch 1000000; it never moves, so spells cannot push it
---   damage (slam)        80               2 x pve_evil_ent damage 40
---   attack_interval      4                pve_evil_ent 1.8, wall_golem 2.5; slow because the hit is telegraphed
---   attack_range         14               arena x 0..18, golem at x=14: reaches x=0 only at the very edge
+--   damage (slam)        50               tuned down from 80 after a test-env play (2026-10-12)
+--   attack_interval      5                slow because the hit is telegraphed; 4 was too punishing in play
+--   attack_range         9                golem at x=14 reaches about x=5; 14 reached the player and hit it every slam
 --   effect_radius        1.5              slam circle, about one lane (lanes are 2 apart)
---   sub_damage (sweep)   40               = pve_evil_ent damage 40
+--   sub_damage (sweep)   30               tuned down from 40 with the slam
 --   sub_attack_interval  2.5              wall_golem attack_interval 2.5
 --   sub_attack_range     3.5              close range, so the sweep only punishes units that reach the body
 --
@@ -38,11 +38,11 @@ SELECT go.id, p.id, v.value
 FROM (VALUES ('hp', 3250.0),
              ('radius', 1.6),
              ('mass', 1000000.0),
-             ('damage', 80.0),
-             ('attack_interval', 4.0),
-             ('attack_range', 14.0),
+             ('damage', 50.0),
+             ('attack_interval', 5.0),
+             ('attack_range', 9.0),
              ('effect_radius', 1.5),
-             ('sub_damage', 40.0),
+             ('sub_damage', 30.0),
              ('sub_attack_interval', 2.5),
              ('sub_attack_range', 3.5)) AS v(name, value)
 JOIN parameters p ON p.name = v.name
