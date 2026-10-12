@@ -30,8 +30,8 @@
 --
 -- Unit values: pve_corrupted_vine_spirit is vine_spirit with hp 50, damage 14, attack_interval 1.0
 -- and attack_range 1.5 (melee), about 1.5 tadpoles (pve_fire_tadpole is hp 30, damage 12 per
--- second). pve_corrupted_wind_spirit is wind_spirit with hp 50, damage 20, attack_interval 1.5 and
--- speed 1.2, about 2 tadpoles. Every other key of the source rows is copied in SQL, so the live
+-- second). pve_corrupted_wind_spirit is wind_spirit with hp 50, damage 30, attack_interval 1.5 and
+-- speed 1.2 (an air self-destruct unit), about 2 tadpoles. Every other key of the source rows is copied in SQL, so the live
 -- values are used; magic_id, mana_cost and quantity are not copied (not cards). The numbers are
 -- first guesses to be tuned by playing. vine_spirit and wind_spirit are not changed.
 --
@@ -60,10 +60,10 @@
 --   * the game server with PullPlayerUnits, PveCorruptedVineSpirit and PveCorruptedWindSpirit
 --     must deploy with this migration; an old server fails on the PullPlayerUnits row of
 --     scenario 18 and on the new prefab types;
---   * scenarios 14 and 15 have zero installer rows: 14 has no gate, and 15 installs its gate at
---     25 s. PveScenarioRepository.findById returns empty for a scenario without installers, so the
---     game server must accept that before this migration reaches production, or both scenarios
---     will not load. Scenario 14 also has no objective row (Survive ignores objectives).
+--   * scenario 14 is Survive with zero installer rows and zero objectives (the game server
+--     loads that since ArcaneCastersGame#134). Scenario 15 is DestroyObjectives, which still
+--     needs one installer, so it has an off-screen marker (PveDimensionToad at x=16, hp 99999,
+--     not an objective) whose spawner event marker_quiet switches off at once.
 -- Idempotent: constraint dropped before it is added, game_objects and parameter_values use ON
 -- CONFLICT, and scenario 14-18 content is deleted before it is inserted again.
 -- no-tags: the PVE prefabs are enemy-only and never enter a bot deck, so counter tags do not apply.
@@ -100,13 +100,19 @@ copied AS (
 overrides(object_name, parameter_name, value) AS (
     VALUES
         ('pve_corrupted_vine_spirit', 'hp', 50.0),
+        ('pve_corrupted_vine_spirit', 'speed', 0.5),
         ('pve_corrupted_vine_spirit', 'damage', 14.0),
         ('pve_corrupted_vine_spirit', 'attack_interval', 1.0),
+        ('pve_corrupted_vine_spirit', 'mass', 2.0),
+        ('pve_corrupted_vine_spirit', 'radius', 0.8),
         ('pve_corrupted_vine_spirit', 'attack_range', 1.5),
         ('pve_corrupted_wind_spirit', 'hp', 50.0),
-        ('pve_corrupted_wind_spirit', 'damage', 20.0),
+        ('pve_corrupted_wind_spirit', 'speed', 1.2),
+        ('pve_corrupted_wind_spirit', 'damage', 30.0),
         ('pve_corrupted_wind_spirit', 'attack_interval', 1.5),
-        ('pve_corrupted_wind_spirit', 'speed', 1.2)
+        ('pve_corrupted_wind_spirit', 'attack_range', 1.5),
+        ('pve_corrupted_wind_spirit', 'mass', 1.0),
+        ('pve_corrupted_wind_spirit', 'radius', 0.3)
 ),
 merged AS (
     SELECT c.object_name, c.parameter_id, c.value
@@ -133,6 +139,34 @@ VALUES
     ('pve_corrupted_vine_spirit', 'Nature'),
     ('pve_corrupted_wind_spirit', 'Wind')
 ON CONFLICT (prefab, element) DO NOTHING;
+
+DO
+$$
+    DECLARE
+        missing text;
+    BEGIN
+        SELECT string_agg(r.object_name || '.' || r.key, ', ') INTO missing
+        FROM (VALUES
+            ('pve_corrupted_vine_spirit', 'hp'), ('pve_corrupted_vine_spirit', 'speed'),
+            ('pve_corrupted_vine_spirit', 'damage'), ('pve_corrupted_vine_spirit', 'attack_interval'),
+            ('pve_corrupted_vine_spirit', 'mass'), ('pve_corrupted_vine_spirit', 'radius'),
+            ('pve_corrupted_wind_spirit', 'hp'), ('pve_corrupted_wind_spirit', 'speed'),
+            ('pve_corrupted_wind_spirit', 'damage'), ('pve_corrupted_wind_spirit', 'attack_interval'),
+            ('pve_corrupted_wind_spirit', 'attack_range'), ('pve_corrupted_wind_spirit', 'mass'),
+            ('pve_corrupted_wind_spirit', 'radius')
+        ) AS r(object_name, key)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM parameter_values pv
+            JOIN game_objects go ON go.id = pv.game_object_id
+            JOIN parameters p ON p.id = pv.parameter_id
+            WHERE go.name = r.object_name AND p.name = r.key
+        );
+        IF missing IS NOT NULL THEN
+            RAISE EXCEPTION 'missing parameter rows: %', missing;
+        END IF;
+    END
+$$;
 
 -- 3. Scenarios 14-18 start empty. pve_scenario_events cascades to lines and actions.
 DELETE FROM pve_scenario_events WHERE scenario_id IN (14, 15, 16, 17, 18);
@@ -197,6 +231,11 @@ FROM (VALUES
 JOIN pve_scenario_events e ON e.event_id = v.event_id AND e.scenario_id = 14;
 
 -- ---- scenario 15: gate_a opens at 25 s ----
+INSERT INTO pve_scenario_installers
+    (installer_id, prefab_type, master, position_x, position_y, position_z, max_hp, sort_order, scenario_id)
+VALUES
+    ('marker', 'PveDimensionToad', 'RightPlayer', 16, 0, 5, 99999, 1, 15);
+
 INSERT INTO pve_scenario_objectives (installer_id, sort_order, scenario_id) VALUES
     ('gate_a', 1, 15);
 
@@ -206,21 +245,22 @@ INSERT INTO pve_scenario_rules (scenario_id, win_condition, survive_seconds) VAL
 INSERT INTO pve_scenario_events
     (event_id, trigger_type, trigger_value, target_installer_id, speaker_installer_id, message_key, sort_order, scenario_id)
 VALUES
-    ('intro', 'SecondsGte', 1, NULL::text, NULL::text, 'pve_15_intro', 1, 15),
-    ('wave_1', 'SecondsGte', 8, NULL::text, NULL::text, NULL::text, 2, 15),
-    ('wave_2', 'SecondsGte', 17, NULL::text, NULL::text, NULL::text, 3, 15),
-    ('wave_3', 'SecondsGte', 21, NULL::text, NULL::text, NULL::text, 4, 15),
-    ('wave_4', 'SecondsGte', 28, NULL::text, NULL::text, NULL::text, 5, 15),
-    ('gate_open', 'SecondsGte', 25, NULL::text, NULL::text, 'pve_15_gate_open', 6, 15),
-    ('wave_5', 'SecondsGte', 34, NULL::text, NULL::text, NULL::text, 7, 15),
-    ('wave_6', 'SecondsGte', 40, NULL::text, NULL::text, NULL::text, 8, 15),
-    ('wave_7', 'SecondsGte', 47, NULL::text, NULL::text, NULL::text, 9, 15),
-    ('wave_8', 'SecondsGte', 54, NULL::text, NULL::text, NULL::text, 10, 15),
-    ('wave_9', 'SecondsGte', 62, NULL::text, NULL::text, NULL::text, 11, 15),
-    ('wave_10', 'SecondsGte', 69, NULL::text, NULL::text, NULL::text, 12, 15),
-    ('wave_11', 'SecondsGte', 76, NULL::text, NULL::text, NULL::text, 13, 15),
-    ('wave_12', 'SecondsGte', 83, NULL::text, NULL::text, NULL::text, 14, 15),
-    ('keep_on', 'SecondsGte', 60, NULL::text, NULL::text, 'pve_15_keep_on', 15, 15);
+    ('marker_quiet', 'SecondsGte', 0, NULL::text, NULL::text, NULL::text, 1, 15),
+    ('intro', 'SecondsGte', 1, NULL::text, NULL::text, 'pve_15_intro', 2, 15),
+    ('wave_1', 'SecondsGte', 8, NULL::text, NULL::text, NULL::text, 3, 15),
+    ('wave_2', 'SecondsGte', 17, NULL::text, NULL::text, NULL::text, 4, 15),
+    ('wave_3', 'SecondsGte', 21, NULL::text, NULL::text, NULL::text, 5, 15),
+    ('wave_4', 'SecondsGte', 28, NULL::text, NULL::text, NULL::text, 6, 15),
+    ('gate_open', 'SecondsGte', 25, NULL::text, NULL::text, 'pve_15_gate_open', 7, 15),
+    ('wave_5', 'SecondsGte', 34, NULL::text, NULL::text, NULL::text, 8, 15),
+    ('wave_6', 'SecondsGte', 40, NULL::text, NULL::text, NULL::text, 9, 15),
+    ('wave_7', 'SecondsGte', 47, NULL::text, NULL::text, NULL::text, 10, 15),
+    ('wave_8', 'SecondsGte', 54, NULL::text, NULL::text, NULL::text, 11, 15),
+    ('wave_9', 'SecondsGte', 62, NULL::text, NULL::text, NULL::text, 12, 15),
+    ('wave_10', 'SecondsGte', 69, NULL::text, NULL::text, NULL::text, 13, 15),
+    ('wave_11', 'SecondsGte', 76, NULL::text, NULL::text, NULL::text, 14, 15),
+    ('wave_12', 'SecondsGte', 83, NULL::text, NULL::text, NULL::text, 15, 15),
+    ('keep_on', 'SecondsGte', 60, NULL::text, NULL::text, 'pve_15_keep_on', 16, 15);
 
 INSERT INTO pve_scenario_event_lines (event_row_id, line_order, line_text)
 SELECT e.id, 1, v.line_text
@@ -236,6 +276,7 @@ INSERT INTO pve_scenario_event_actions
 SELECT e.id, v.action_order, v.action_type, v.installer_id, v.prefab_type, v.count, v.interval_seconds,
        v.position_x, v.position_z, v.max_hp, v.bgm_key
 FROM (VALUES
+    ('marker_quiet', 1, 'SetSpawner', 'marker', NULL::text, 0, NULL::real, NULL::integer, NULL::integer, NULL::integer, NULL::text),
     ('wave_1', 1, 'SpawnWave', NULL::text, 'PveFireTadpole', 3, NULL::real, 14, 5, NULL::integer, NULL::text),
     ('wave_2', 1, 'SpawnWave', NULL::text, 'PveLightningTadpole', 4, NULL::real, 14, 3, NULL::integer, NULL::text),
     ('wave_3', 1, 'SpawnWave', NULL::text, 'PveFireTadpole', 5, NULL::real, 14, 7, NULL::integer, NULL::text),
