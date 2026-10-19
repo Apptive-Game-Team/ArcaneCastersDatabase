@@ -74,7 +74,6 @@ DO UPDATE SET value = EXCLUDED.value, updated_at = now();
 INSERT INTO prefab_elements(prefab, element)
 SELECT v.prefab, v.element
 FROM (VALUES
-        ('arcane_infantry', 'None'),
         ('crater_carrier', 'Fire'),
         ('crater_carrier', 'Rock'),
         ('crater_shell', 'Fire'),
@@ -171,7 +170,6 @@ BEGIN
 
     SELECT expected.prefab || '/' || expected.element INTO missing_item
     FROM (VALUES
-        ('arcane_infantry', 'None'),
         ('crater_carrier', 'Fire'),
         ('crater_carrier', 'Rock'),
         ('crater_shell', 'Fire'),
