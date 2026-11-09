@@ -55,6 +55,14 @@ Neither check applies migrations to a scratch database. `V000` opens with
 `create database` and carries a `pg_catalog` dump, so the chain cannot be replayed from
 empty; see issue #23.
 
+## 성장 보상 지급표
+
+V125는 진영별 시작 카드와 레벨별 고정 보상을 변경한다. `progression_magic_rewards`의
+기본 키는 `(faction, unlock_level, magic_id)`이며 같은 카드를 시작·후속 레벨에 등록할 수 있다.
+상자 후보를 조회하는 소비자는 같은 마법을 한 번만 반환하고 가장 이른 등록 레벨부터 허용해야 한다.
+상자 후보 중복을 제거하는 Lobby를 먼저 배포한 뒤 V125를 적용한다.
+기존 보유 카드·덱·발급된 미수령 보상은 새 지급표로 다시 만들지 않는다.
+
 ## Counter Tags
 
 `tags`, `game_object_tags`, and `magic_tags` describe what each object and magic is, and
