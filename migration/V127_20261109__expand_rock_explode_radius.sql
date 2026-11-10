@@ -10,6 +10,15 @@ WHERE object.name = 'rock_explode'
   AND stored.value IS DISTINCT FROM 1.5;
 
 DO $$
+DECLARE
+    blast_layer constant jsonb := '{
+        "shape": "objectCircles",
+        "origin": "target",
+        "prefabs": ["RockRemnant", "MediumRockRemnant"],
+        "selectionRadius": {"object": "rock_blast", "parameter": "radius"},
+        "radius": {"object": "rock_explode", "parameter": "radius"},
+        "edgeWidth": 0.12
+    }'::jsonb;
 BEGIN
     IF NOT EXISTS (
         SELECT 1
@@ -21,6 +30,23 @@ BEGIN
           AND stored.value = 1.5
     ) THEN
         RAISE EXCEPTION 'rock_explode.radius is missing or was not set to 1.5';
+    END IF;
+
+    UPDATE magics
+    SET indicator = jsonb_set(indicator, '{layers}', (indicator -> 'layers') || jsonb_build_array(blast_layer)),
+        updated_at = now()
+    WHERE name = 'rock_blast'
+      AND indicator ->> 'version' = '1'
+      AND jsonb_typeof(indicator -> 'layers') = 'array'
+      AND NOT ((indicator -> 'layers') @> jsonb_build_array(blast_layer));
+
+    IF NOT EXISTS (
+        SELECT 1 FROM magics
+        WHERE name = 'rock_blast'
+          AND indicator ->> 'version' = '1'
+          AND (indicator -> 'layers') @> jsonb_build_array(blast_layer)
+    ) THEN
+        RAISE EXCEPTION 'rock_blast indicator is missing its objectCircles layer';
     END IF;
 END
 $$;
