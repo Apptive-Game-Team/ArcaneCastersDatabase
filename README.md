@@ -101,10 +101,7 @@ The legacy `game_objects` rows that duplicate a live object -- `cannon`, `fire_e
 the `_swarm` names and the rest -- stay untagged as well. They never instantiate; the magics
 named after them reach the live object through `magic_game_object_aliases`.
 
-Elements are deliberately not tagged. `ElementalChart` on the game server owns the element
-multiplier table, real damage is computed from it, and the client's magic book mirrors it.
-A copy here would be a second source of truth for one rule, and only the bot's copy would
-be missed during a balance pass.
+원소는 봇의 카운터 태그에 포함하지 않습니다. 전투 피해에 원소 상성 배율을 적용하지 않으며, 마법의 원소는 도감 분류에 사용합니다.
 
 Follow [`.agents/skills/register-game-object/SKILL.md`](.agents/skills/register-game-object/SKILL.md)
 when writing a registration migration.
